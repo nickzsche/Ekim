@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+'use client';
 import html2canvas from 'html2canvas';
 
 // Helper function to load image as base64
@@ -76,6 +76,7 @@ export interface QuotePDFData {
 
 export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   try {
+    const jsPDF = (await import('jspdf')).default;
     console.log('PDF oluşturma başladı...');
     
     // Load logo as base64
