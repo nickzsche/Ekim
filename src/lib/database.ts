@@ -1,0 +1,283 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+
+// Veritabanı dosyasının yolu
+const dbPath = path.join(process.cwd(), 'data', 'products.db');
+
+// Veritabanı bağlantısı
+let db: Database.Database;
+
+export function getDatabase() {
+  if (!db) {
+    // Data klasörü yoksa oluştur
+    const fs = require('fs');
+    const dataDir = path.dirname(dbPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    db = new Database(dbPath);
+    
+    // Ürünler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE,
+        brand TEXT,
+        model TEXT,
+        category TEXT,
+        price REAL,
+        description TEXT,
+        specifications TEXT,
+        stock_quantity INTEGER DEFAULT 0,
+        unit TEXT DEFAULT 'adet',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Müşteriler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        company TEXT,
+        address TEXT,
+        tax_number TEXT,
+        tax_office TEXT,
+        balance REAL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Teklifler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS quotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT NOT NULL,
+        customer_email TEXT,
+        customer_phone TEXT,
+        company TEXT,
+        total_amount REAL DEFAULT 0,
+        status TEXT DEFAULT 'draft',
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Teklif kalemleri tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS quote_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quote_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price REAL NOT NULL,
+        total_price REAL NOT NULL,
+        FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    `);
+
+    // Cari hareketler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('tahsilat', 'ödeme', 'çek', 'borç')),
+        method TEXT NOT NULL CHECK(method IN ('nakit', 'kredi', 'çek', 'manuel')),
+        amount REAL NOT NULL,
+        description TEXT,
+        verilis_tarihi TEXT,
+        vade_tarihi TEXT,
+        bank TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+      )
+    `);
+
+    // Eğer customers tablosunda balance kolonu yoksa ekle
+    const tableInfo = db.prepare("PRAGMA table_info(customers)").all();
+    const hasBalance = (tableInfo as any[]).some((col: any) => col.name === 'balance');
+    if (!hasBalance) {
+      db.exec(`ALTER TABLE customers ADD COLUMN balance REAL DEFAULT 0`);
+    }
+
+    // Tanımlı projeler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Tedarikçiler tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        contact_name TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Products tablosuna supplier_id kolonu ekle (yoksa)
+    const productsTableInfo = db.prepare("PRAGMA table_info(products)").all();
+    const hasSupplierId = (productsTableInfo as any[]).some((col: any) => col.name === 'supplier_id');
+    if (!hasSupplierId) {
+      db.exec(`ALTER TABLE products ADD COLUMN supplier_id INTEGER REFERENCES suppliers(id)`);
+    }
+
+    // Proje grupları tablosunu oluştur (kategoriler)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+      )
+    `);
+
+    // Proje ürünleri tablosunu oluştur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        group_id INTEGER,
+        product_id INTEGER NOT NULL,
+        product_name TEXT NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        unit_price REAL DEFAULT 0,
+        discount REAL DEFAULT 0,
+        margin REAL DEFAULT 0,
+        sales_price REAL DEFAULT 0,
+        square_meters REAL DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (group_id) REFERENCES project_groups (id) ON DELETE SET NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    `);
+  }
+  
+  return db;
+}
+
+// Ürün tipi
+export interface Product {
+  id: number;
+  name: string;
+  code?: string;
+  brand?: string;
+  model?: string;
+  category?: string;
+  price?: number;
+  description?: string;
+  specifications?: string;
+  stock_quantity?: number;
+  unit?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Müşteri tipi
+export interface Customer {
+  id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  tax_number?: string;
+  tax_office?: string;
+  balance?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Cari hareket tipi
+export interface Transaction {
+  id?: number;
+  customer_id: number;
+  date: string;
+  type: 'tahsilat' | 'ödeme' | 'çek' | 'borç';
+  method: 'nakit' | 'kredi' | 'çek' | 'manuel';
+  amount: number;
+  description?: string;
+  verilis_tarihi?: string;
+  vade_tarihi?: string;
+  bank?: string;
+  created_at?: string;
+}
+
+// Teklif tipi
+export interface Quote {
+  id?: number;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  company?: string;
+  total_amount?: number;
+  status?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Teklif kalemi tipi
+export interface QuoteItem {
+  id?: number;
+  quote_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+// Tanımlı proje tipi
+export interface Project {
+  id?: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Proje grubu tipi
+export interface ProjectGroup {
+  id?: number;
+  project_id: number;
+  name: string;
+  sort_order?: number;
+}
+
+// Proje ürün tipi
+export interface ProjectItem {
+  id?: number;
+  project_id: number;
+  group_id?: number;
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  margin: number;
+  sales_price: number;
+  square_meters: number;
+  sort_order?: number;
+}

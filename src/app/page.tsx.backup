@@ -1,0 +1,1836 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { Product, Quote, QuoteItem, Customer } from '@/lib/database';
+import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
+
+// Types and Interfaces
+interface CartItem {
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  margin?: number;
+  customName?: string;
+  salesPrice?: number;
+  manualSalesPrice?: boolean;
+  isGrouped?: boolean;
+  groupName?: string;
+  groupItems?: CartItem[];
+}
+
+// Constants and Steps
+const steps = [
+  { id: 1, title: 'Müşteri', icon: '👥' },
+  { id: 2, title: 'Proje', icon: '📝' },
+  { id: 3, title: 'Ürünler', icon: '🛒' },
+  { id: 4, title: 'Özet', icon: '✓' },
+];
+
+export default function Home() {
+  // States for navigation and UI
+  const [activeStep, setActiveStep] = useState(1);
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [subtotal, setSubtotal] = useState(0);
+  const [kdv, setKdv] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [isGrouping, setIsGrouping] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [viewingGroup, setViewingGroup] = useState<CartItem | null>(null);
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    address: ''
+  });
+  const [projectDetails, setProjectDetails] = useState({
+    projectDesign: '',
+    projectDescription: ''
+  });
+  const [schedule, setSchedule] = useState({
+    startDate: '',
+    endDate: ''
+  });
+  const [conditions, setConditions] = useState({
+    validityPeriod: '30',
+    deliveryTime: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
+  
+  // Tavan hesaplama için state'ler
+  const [ceilingWidth, setCeilingWidth] = useState<number>(0);
+  const [ceilingHeight, setCeilingHeight] = useState<number>(0);
+  const [ceilingCount, setCeilingCount] = useState<number>(1);
+  const [ceilingPricePerSquareMeter, setCeilingPricePerSquareMeter] = useState<number>(0);
+  
+  // Zemin hesaplama için state'ler
+  const [floorWidth, setFloorWidth] = useState<number>(0);
+  const [floorHeight, setFloorHeight] = useState<number>(0);
+  const [floorCount, setFloorCount] = useState<number>(1);
+  const [floorPricePerSquareMeter, setFloorPricePerSquareMeter] = useState<number>(0);
+  
+  // Duvar hesaplama için state'ler
+  const [wallWidth, setWallWidth] = useState<number>(0);
+  const [wallHeight, setWallHeight] = useState<number>(0);
+  const [wallCount, setWallCount] = useState<number>(1);
+  const [wallPricePerSquareMeter, setWallPricePerSquareMeter] = useState<number>(0);
+  
+  // Tavan, zemin ve duvar için ayrı hesaplama fonksiyonları
+  const ceilingSquareMeters = ceilingWidth * ceilingHeight * ceilingCount;
+  const ceilingTotalPrice = ceilingSquareMeters * ceilingPricePerSquareMeter;
+  
+  const floorSquareMeters = floorWidth * floorHeight * floorCount;
+  const floorTotalPrice = floorSquareMeters * floorPricePerSquareMeter;
+  
+  const wallSquareMeters = wallWidth * wallHeight * wallCount;
+  const wallTotalPrice = wallSquareMeters * wallPricePerSquareMeter;
+
+  // Memoized filtered products
+  const getFilteredProducts = () => products.filter((product) => {
+    const matchesSearch = 
+      !searchTerm ||
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (product.model && product.model.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCustomers();
+  }, []);
+
+  // Data fetching functions
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error('Ürünler yüklenirken hata:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch('/api/customers');
+      const data = await response.json();
+      setCustomers(data);
+    } catch (error) {
+      console.error('Müşteriler yüklenirken hata:', error);
+    }
+  };
+
+  // Group functions
+  const handleGroupProducts = () => {
+    if (selectedProducts.length < 1) {
+      alert('En az 1 ürün seçmelisiniz');
+      return;
+    }
+    setIsGrouping(true);
+  };
+
+  const createGroup = () => {
+    if (!groupName) {
+      alert('Grup adı giriniz');
+      return;
+    }
+
+    const selectedItems = cart.filter(item => selectedProducts.includes(item.product.id));
+    
+    // Calculate total price for the group
+    const totalPrice = selectedItems.reduce((sum, item) => {
+      const salesPrice = item.salesPrice ?? item.unitPrice;
+      return sum + (salesPrice * item.quantity);
+    }, 0);
+
+    const groupHeader: CartItem = {
+      product: {
+        id: Date.now(),
+        name: groupName,
+        price: totalPrice,
+        category: 'Grup',
+        stock_quantity: 1
+      },
+      quantity: 1,
+      unitPrice: totalPrice,
+      isGrouped: true,
+      groupItems: selectedItems,
+      salesPrice: totalPrice,
+      manualSalesPrice: false
+    };
+
+    setCart(prev => [
+      ...prev.filter(item => !selectedProducts.includes(item.product.id)),
+      groupHeader
+    ]);
+
+    setSelectedProducts([]);
+    setIsGrouping(false);
+    setGroupName('');
+  };
+
+  // Cart management functions
+  const addToCart = (product: Product) => {
+    const existingItem = cart.find(item => item.product.id === product.id);
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.product.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([
+        ...cart,
+        {
+          product,
+          quantity: 1,
+          unitPrice: product.price || 0,
+          discount: 0,
+          margin: 0,
+          customName: '',
+          salesPrice: product.price || 0,
+          manualSalesPrice: false
+        }
+      ]);
+    }
+  };
+
+
+
+
+    
+    const squareMeterProduct: Product = {
+      id: Date.now(), // Benzersiz ID için timestamp kullanıyoruz
+      name: `Metrekare Hesaplama (${totalSquareMeters.toFixed(2)} m²)`,
+      price: totalPrice,
+      category: 'Metrekare Hesaplama',
+      stock_quantity: 1,
+      unit: 'm²',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: squareMeterProduct,
+        quantity: 1,
+        unitPrice: totalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Metrekare Hesaplama (${totalSquareMeters.toFixed(2)} m²)`,
+        salesPrice: totalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Alanları sıfırla
+    setWidth(0);
+    setHeight(0);
+    setCount(1);
+    setFloorWidth(0);
+    setFloorHeight(0);
+    setFloorCount(1);
+    setWallWidth(0);
+    setWallHeight(0);
+    setWallCount(1);
+    setPricePerSquareMeter(0);
+  };
+  
+  // Tavan hesaplamasını sepete ekle
+
+  const addCeilingToCart = () => {
+    if (ceilingSquareMeters <= 0) {
+      alert('Lütfen geçerli tavan metrekare değerleri girin');
+      return;
+    }
+    
+    if (ceilingPricePerSquareMeter <= 0) {
+      alert('Lütfen tavan metrekare başına fiyat girin');
+      return;
+    }
+    
+    const detailedDescription = `Tavan: ${ceilingSquareMeters.toFixed(2)} m²`;
+    
+    const ceilingProduct: Product = {
+      id: Date.now() + 1, // Benzersiz ID için timestamp kullanıyoruz
+      name: `Tavan (${ceilingSquareMeters.toFixed(2)} m²)`,
+      price: ceilingTotalPrice,
+      category: 'Metrekare Hesaplama',
+      stock_quantity: 1,
+      unit: 'm²',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: ceilingProduct,
+        quantity: 1,
+        unitPrice: ceilingTotalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Tavan (${ceilingSquareMeters.toFixed(2)} m²)`,
+        salesPrice: ceilingTotalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Tavan alanlarını sıfırla
+    setCeilingWidth(0);
+    setCeilingHeight(0);
+    setCeilingCount(1);
+    setCeilingPricePerSquareMeter(0);
+  };
+  
+  // Zemin hesaplamasını sepete ekle
+  const addFloorToCart = () => {
+    if (floorSquareMeters <= 0) {
+      alert('Lütfen geçerli zemin metrekare değerleri girin');
+      return;
+    }
+    
+    if (floorPricePerSquareMeter <= 0) {
+      alert('Lütfen zemin metrekare başına fiyat girin');
+      return;
+    }
+    
+    const detailedDescription = `Zemin: ${floorSquareMeters.toFixed(2)} m²`;
+    
+    const floorProduct: Product = {
+      id: Date.now() + 2, // Benzersiz ID için timestamp kullanıyoruz
+      name: `Zemin (${floorSquareMeters.toFixed(2)} m²)`,
+      price: floorTotalPrice,
+      category: 'Metrekare Hesaplama',
+      stock_quantity: 1,
+      unit: 'm²',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: floorProduct,
+        quantity: 1,
+        unitPrice: floorTotalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Zemin (${floorSquareMeters.toFixed(2)} m²)`,
+        salesPrice: floorTotalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Zemin alanlarını sıfırla
+    setFloorWidth(0);
+    setFloorHeight(0);
+    setFloorCount(1);
+    setFloorPricePerSquareMeter(0);
+  };
+  
+  // Duvar hesaplamasını sepete ekle
+  const addWallToCart = () => {
+    if (wallSquareMeters <= 0) {
+      alert('Lütfen geçerli duvar metrekare değerleri girin');
+      return;
+    }
+    
+    if (wallPricePerSquareMeter <= 0) {
+      alert('Lütfen duvar metrekare başına fiyat girin');
+      return;
+    }
+    
+    const detailedDescription = `Duvar: ${wallSquareMeters.toFixed(2)} m²`;
+    
+    const wallProduct: Product = {
+      id: Date.now() + 3, // Benzersiz ID için timestamp kullanıyoruz
+      name: `Duvar (${wallSquareMeters.toFixed(2)} m²)`,
+      price: wallTotalPrice,
+      category: 'Metrekare Hesaplama',
+      stock_quantity: 1,
+      unit: 'm²',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: wallProduct,
+        quantity: 1,
+        unitPrice: wallTotalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Duvar (${wallSquareMeters.toFixed(2)} m²)`,
+        salesPrice: wallTotalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Duvar alanlarını sıfırla
+    setWallWidth(0);
+    setWallHeight(0);
+    setWallCount(1);
+    setWallPricePerSquareMeter(0);
+  };
+  
+  // Cart item update functions
+    setCart([
+      ...cart,
+      {
+        product: floorProduct,
+        quantity: 1,
+        unitPrice: floorTotalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Zemin (${floorSquareMeters.toFixed(2)} m²)`,
+        salesPrice: floorTotalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Zemin alanlarını sıfırla
+    setFloorWidth(0);
+    setFloorHeight(0);
+    setFloorCount(1);
+    setFloorPricePerSquareMeter(0);
+  };
+  
+  // Duvar hesaplamasını sepete ekle
+  const addWallToCart = () => {
+    if (wallSquareMeters <= 0) {
+      alert('Lütfen geçerli duvar metrekare değerleri girin');
+      return;
+    }
+    
+    if (wallPricePerSquareMeter <= 0) {
+      alert('Lütfen duvar metrekare başına fiyat girin');
+      return;
+    }
+    
+    const detailedDescription = `Duvar: ${wallSquareMeters.toFixed(2)} m²`;
+    
+    const wallProduct: Product = {
+      id: Date.now() + 3, // Benzersiz ID için timestamp kullanıyoruz
+      name: `Duvar (${wallSquareMeters.toFixed(2)} m²)`,
+      price: wallTotalPrice,
+      category: 'Metrekare Hesaplama',
+      stock_quantity: 1,
+      unit: 'm²',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: wallProduct,
+        quantity: 1,
+        unitPrice: wallTotalPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Duvar (${wallSquareMeters.toFixed(2)} m²)`,
+        salesPrice: wallTotalPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Duvar alanlarını sıfırla
+    setWallWidth(0);
+    setWallHeight(0);
+    setWallCount(1);
+    setWallPricePerSquareMeter(0);
+  };
+  
+  // Cart item update functions
+  const updateProductName = (productId: number, customName: string) => {
+    setCart(cart.map(item =>
+      item.product.id === productId
+        ? { ...item, customName }
+        : item
+    ));
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCart(cart.filter(item => item.product.id !== productId));
+  };
+
+  const updateQuantity = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(cart.map(item => 
+      item.product.id === productId 
+        ? { ...item, quantity }
+        : item
+    ));
+  };
+
+  const updateUnitPrice = (productId: number, unitPrice: number) => {
+    setCart(cart.map(item => {
+      if (item.product.id === productId) {
+        let newSalesPrice = item.manualSalesPrice
+          ? item.salesPrice
+          : calculateSalesPrice(unitPrice, item.discount || 0, item.margin || 0);
+        return { ...item, unitPrice, salesPrice: newSalesPrice };
+      }
+      return item;
+    }));
+  };
+
+  const updateDiscount = (productId: number, discount: number) => {
+    setCart(cart.map(item => {
+      if (item.product.id === productId) {
+        let newSalesPrice = item.manualSalesPrice
+          ? item.salesPrice
+          : calculateSalesPrice(item.unitPrice, discount, item.margin || 0);
+        return { ...item, discount, salesPrice: newSalesPrice };
+      }
+      return item;
+    }));
+  };
+
+  const updateMargin = (productId: number, margin: number) => {
+    setCart(cart.map(item => {
+      if (item.product.id === productId) {
+        let newSalesPrice = item.manualSalesPrice
+          ? item.salesPrice
+          : calculateSalesPrice(item.unitPrice, item.discount || 0, margin);
+        return { ...item, margin, salesPrice: newSalesPrice };
+      }
+      return item;
+    }));
+  };
+
+  const updateSalesPrice = (productId: number, salesPrice: number) => {
+    setCart(cart.map(item => {
+      if (item.product.id === productId) {
+        return { ...item, salesPrice, manualSalesPrice: true };
+      }
+      return item;
+    }));
+  };
+
+  // Cart item update functions for grouped items
+  const updateGroupedItem = (groupId: number, updates: Partial<CartItem>) => {
+    setCart(cart.map(item => {
+      if (item.product.id === groupId && item.isGrouped) {
+        // Update the group header (excluding product name changes)
+        const { product, ...otherUpdates } = updates;
+        const updatedItem = { ...item, ...otherUpdates };
+        
+        // If we're updating unitPrice, salesPrice, discount, or margin, recalculate
+        if (updates.unitPrice !== undefined || updates.discount !== undefined || updates.margin !== undefined) {
+          const newUnitPrice = updates.unitPrice !== undefined ? updates.unitPrice : (item.unitPrice || 0);
+          const newDiscount = updates.discount !== undefined ? updates.discount : (item.discount || 0);
+          const newMargin = updates.margin !== undefined ? updates.margin : (item.margin || 0);
+          
+          // Recalculate sales price
+          const discounted = newUnitPrice * (1 - (newDiscount || 0) / 100);
+          const withMargin = discounted * (1 + (newMargin || 0) / 100);
+          const newSalesPrice = parseFloat(withMargin.toFixed(2));
+          
+          updatedItem.unitPrice = newUnitPrice;
+          updatedItem.salesPrice = newSalesPrice;
+          updatedItem.discount = newDiscount;
+          updatedItem.margin = newMargin;
+        }
+        
+        return updatedItem;
+      }
+      return item;
+    }));
+  };
+
+  const removeGroupedItem = (groupId: number) => {
+    setCart(cart.filter(item => item.product.id !== groupId));
+  };
+
+  // Helper functions
+  const calculateSalesPrice = (unitPrice: number, discount: number, margin: number) => {
+    const discounted = unitPrice * (1 - (discount || 0) / 100);
+    const withMargin = discounted * (1 + (margin || 0) / 100);
+    return parseFloat(withMargin.toFixed(2));
+  };
+
+  // Quote management functions
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomer(customerId);
+    if (customerId) {
+      const customer = customers.find(c => c.id?.toString() === customerId);
+      if (customer) {
+        setCustomerInfo({
+          name: customer.name,
+          email: customer.email || '',
+          phone: customer.phone || '',
+          company: customer.company || '',
+          address: customer.address || ''
+        });
+      }
+    } else {
+      setCustomerInfo({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        address: ''
+      });
+    }
+  };
+
+  const loadQuoteForEditing = async (quoteData: any) => {
+    try {
+      setEditingQuoteId(quoteData.id);
+      
+      setCustomerInfo({
+        name: quoteData.customer_name || '',
+        email: quoteData.customer_email || '',
+        phone: quoteData.customer_phone || '',
+        company: quoteData.company || '',
+        address: ''
+      });
+      
+      const notes = quoteData.notes || '';
+      const projectDesign = notes.match(/Proje Tasarım: ([^\n]*)/)?.[1] || '';
+      const projectDescription = notes.match(/Proje Açıklama: ([^\n]*)/)?.[1] || '';
+      const startDate = notes.match(/Başlangıç: ([^\n]*)/)?.[1] || '';
+      const endDate = notes.match(/Bitiş: ([^\n]*)/)?.[1] || '';
+      const validityPeriod = notes.match(/Geçerlilik: ([^\n]*)/)?.[1] || '30';
+      const deliveryTime = notes.match(/Teslim: ([^\n]*)/)?.[1] || '';
+      
+      setProjectDetails({
+        projectDesign,
+        projectDescription
+      });
+      
+      setSchedule({
+        startDate,
+        endDate
+      });
+      
+      setConditions({
+        validityPeriod: validityPeriod.replace(' gün', ''),
+        deliveryTime
+      });
+      
+      const response = await fetch(`/api/quotes/${quoteData.id}`);
+      if (response.ok) {
+        const details = await response.json();
+        const cartItems: CartItem[] = details.items?.map((item: any) => ({
+          product: {
+            id: item.product_id,
+            name: item.product_name || 'Unknown Product',
+            brand: item.brand || '',
+            model: item.model || '',
+            code: item.code || '',
+            category: '',
+            price: item.unit_price,
+            description: '',
+            specifications: '',
+            stock_quantity: 0,
+            unit: 'adet'
+          },
+          quantity: item.quantity,
+          unitPrice: item.unit_price
+        })) || [];
+        
+        setCart(cartItems);
+      }
+      
+      setActiveStep(1);
+    } catch (error) {
+      console.error('Quote loading error:', error);
+      alert('Teklif yüklenirken hata oluştu!');
+    }
+  };
+
+  const createQuote = async () => {
+    if (!customerInfo.name.trim()) {
+      alert('Müşteri adı zorunludur!');
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert('Sepette ürün bulunmuyor!');
+      return;
+    }
+
+    try {
+      const totalAmount = cart.reduce((sum, item) => 
+        sum + item.unitPrice * item.quantity, 0
+      );
+
+      const quote: Quote = {
+        customer_name: customerInfo.name,
+        customer_email: customerInfo.email || undefined,
+        customer_phone: customerInfo.phone || undefined,
+        company: customerInfo.company || undefined,
+        total_amount: totalAmount,
+        status: 'draft',
+        notes: `Proje Tasarım: ${projectDetails.projectDesign}
+Proje Açıklama: ${projectDetails.projectDescription}
+Başlangıç: ${schedule.startDate}
+Bitiş: ${schedule.endDate}
+Geçerlilik: ${conditions.validityPeriod} gün
+Teslim: ${conditions.deliveryTime}`
+      };
+
+      const items: QuoteItem[] = cart
+        .filter(item => !item.isGrouped) // Gruplanmış ürünleri veritabanına kaydetme
+        .map(item => ({
+          product_id: item.product.id!,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.unitPrice * item.quantity,
+          quote_id: 0
+        }));
+      
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ quote, items }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const quoteId = result.quoteId;
+
+        const pdfData: QuotePDFData = {
+          quoteId: quoteId,
+          customerInfo: {
+            name: customerInfo.name,
+            company: customerInfo.company,
+            email: customerInfo.email,
+            phone: customerInfo.phone,
+            address: customerInfo.address
+          },
+          projectDetails: {
+            projectDesign: projectDetails.projectDesign,
+            projectDescription: projectDetails.projectDescription
+          },
+          schedule: {
+            startDate: schedule.startDate,
+            endDate: schedule.endDate
+          },
+          conditions: {
+            validityPeriod: conditions.validityPeriod,
+            deliveryTime: conditions.deliveryTime
+          },
+          items: cart.map(item => ({
+            product: {
+              name: item.isGrouped ? item.product.name : (item.customName || item.product.name),
+              brand: item.isGrouped ? '' : item.product.brand,
+              model: item.isGrouped ? '' : item.product.model,
+              code: item.isGrouped ? '' : item.product.code,
+            },
+            quantity: item.quantity,
+            unitPrice: item.salesPrice ?? item.unitPrice,
+            total: (item.salesPrice ?? item.unitPrice) * item.quantity,
+          })),
+          subtotal: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0),
+          kdv: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0) * 0.20,
+          total: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0) * 1.20,
+          createdAt: new Date().toISOString()
+        };
+
+        await generateQuotePDF(pdfData);
+
+        alert('Teklif başarıyla oluşturuldu ve PDF indirildi!');
+
+        setCart([]);
+        setCustomerInfo({
+          name: '',
+          email: '',
+          phone: '',
+          company: '',
+          address: ''
+        });
+        setProjectDetails({
+          projectDesign: '',
+          projectDescription: ''
+        });
+        setSchedule({
+          startDate: '',
+          endDate: ''
+        });
+        setConditions({
+          validityPeriod: '30',
+          deliveryTime: ''
+        });
+        setSelectedCustomer('');
+        setActiveStep(1);
+      } else {
+        alert('Teklif oluşturulurken hata oluştu!');
+      }
+    } catch (error) {
+      console.error('Teklif oluşturma hatası:', error);
+      alert('Teklif oluşturulurken hata oluştu!');
+    }
+  };
+
+  // Get computed values
+  useEffect(() => {
+    // Update categories
+    setCategories([...new Set(products.map(p => p.category).filter((cat): cat is string => cat !== undefined && cat !== null))]);
+    
+    // Update financial calculations
+    const calculatedSubtotal = cart.reduce((sum, item) => 
+      sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0);
+    setSubtotal(calculatedSubtotal);
+    
+    const calculatedKdv = calculatedSubtotal * 0.20;
+    setKdv(calculatedKdv);
+    
+    setTotal(calculatedSubtotal + calculatedKdv);
+  }, [products, cart]);
+  const calculatedTotal = subtotal + kdv;
+
+  const totalCost = cart.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    const discountedUnit = item.unitPrice * (1 - discount / 100);
+    return sum + discountedUnit * item.quantity;
+  }, 0);
+
+  const totalProfit = cart.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    const margin = item.margin ?? 0;
+    const discountedUnit = item.unitPrice * (1 - discount / 100);
+    const profitPerUnit = discountedUnit * (margin / 100);
+    return sum + profitPerUnit * item.quantity;
+  }, 0);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  const steps = [
+    { id: 1, title: 'Müşteri Bilgileri', icon: '👤' },
+    { id: 2, title: 'Proje Detayları', icon: '📋' },
+    { id: 3, title: 'Ürün Seçimi', icon: '🛍️' },
+    { id: 4, title: 'Özet & Onay', icon: '✅' }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        {/* Steps Progress */}
+        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center group">
+                  <button
+                    onClick={() => setActiveStep(step.id)}
+                    className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
+                      activeStep === step.id
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-gray-800 shadow-xl scale-105'
+                        : activeStep > step.id
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-gray-800 shadow-lg'
+                        : 'bg-white text-gray-600 shadow-md hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className={`text-2xl ${activeStep === step.id ? 'animate-bounce' : ''}`}>
+                      {step.icon}
+                    </span>
+                    <span className="font-semibold hidden sm:inline text-sm">{step.title}</span>
+                  </button>
+                  {index < steps.length - 1 && (
+                    <div className={`w-12 h-1 mx-4 rounded-full transition-all duration-500 ${
+                      activeStep > step.id 
+                        ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                        : activeStep === step.id
+                        ? 'bg-gradient-to-r from-blue-400 to-blue-500'
+                        : 'bg-gray-200'
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="mt-8">
+          {/* Step 1: Müşteri Bilgileri */}
+          {activeStep === 1 && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-blue-100">
+              <h2 className="text-2xl font-bold mb-6 text-blue-800">Müşteri Bilgileri</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">Müşteri Seçimi</label>
+                  <select
+                    value={selectedCustomer}
+                    onChange={(e) => handleCustomerSelect(e.target.value)}
+                    className="w-full p-2 border rounded-lg select-text bg-blue-50 border-blue-200"
+                  >
+                    <option value="">Yeni Müşteri</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id} className="text-gray-800">
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">Müşteri Adı</label>
+                  <input
+                    type="text"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-blue-50 border-blue-200"
+                    placeholder="Müşteri adını girin"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">E-posta</label>
+                  <input
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-blue-50 border-blue-200"
+                    placeholder="ornek@firma.com"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">Telefon</label>
+                  <input
+                    type="tel"
+                    value={customerInfo.phone}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-blue-50 border-blue-200"
+                    placeholder="+90"
+                  />
+                </div>
+                <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">Firma Adı</label>
+                  <input
+                    type="text"
+                    value={customerInfo.company}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, company: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-blue-50 border-blue-200"
+                    placeholder="Firma adını girin"
+                  />
+                </div>
+                <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-blue-700">Adres</label>
+                  <textarea
+                    value={customerInfo.address}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-blue-50 border-blue-200"
+                    rows={3}
+                    placeholder="Firma adresini girin"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Proje Detayları */}
+          {activeStep === 2 && (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border border-green-100">
+              <h2 className="text-2xl font-bold mb-6 text-green-800">Proje Detayları</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Proje Tasarımı</label>
+                  <textarea
+                    value={projectDetails.projectDesign}
+                    onChange={(e) =>
+                      setProjectDetails({ ...projectDetails, projectDesign: e.target.value })
+                    }
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                    rows={4}
+                    placeholder="Proje tasarımını açıklayın"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Proje Açıklaması</label>
+                  <textarea
+                    value={projectDetails.projectDescription}
+                    onChange={(e) =>
+                      setProjectDetails({ ...projectDetails, projectDescription: e.target.value })
+                    }
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                    rows={4}
+                    placeholder="Proje detaylarını açıklayın"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Başlangıç Tarihi</label>
+                  <input
+                    type="date"
+                    value={schedule.startDate}
+                    onChange={(e) => setSchedule({ ...schedule, startDate: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Bitiş Tarihi</label>
+                  <input
+                    type="date"
+                    value={schedule.endDate}
+                    onChange={(e) => setSchedule({ ...schedule, endDate: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Geçerlilik Süresi (Gün)</label>
+                  <input
+                    type="number"
+                    value={conditions.validityPeriod}
+                    onChange={(e) => setConditions({ ...conditions, validityPeriod: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                    min="1"
+                  />
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <label className="block text-sm font-medium mb-2 text-green-700">Teslimat Süresi</label>
+                  <input
+                    type="text"
+                    value={conditions.deliveryTime}
+                    onChange={(e) => setConditions({ ...conditions, deliveryTime: e.target.value })}
+                    className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
+                    placeholder="Örn: 15 iş günü"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Ürün Seçimi */}
+          {activeStep === 3 && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-lg p-6 border border-amber-100">
+                <h2 className="text-2xl font-bold mb-6 text-amber-800">Ürün Seçimi</h2>
+                
+                {/* Square Meter Calculator */}
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-amber-200">
+                  <h3 className="text-md font-semibold mb-3 text-amber-700">Metrekare Hesaplama</h3>
+                  
+                  {/* Tavan hesaplama */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Tavan En (m)</label>
+                      <input
+                        type="number"
+                        value={ceilingWidth || ''}
+                        onChange={(e) => setCeilingWidth(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Tavan Boy (m)</label>
+                      <input
+                        type="number"
+                        value={ceilingHeight || ''}
+                        onChange={(e) => setCeilingHeight(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Tavan Adet</label>
+                      <input
+                        type="number"
+                        value={ceilingCount || ''}
+                        onChange={(e) => setCeilingCount(parseInt(e.target.value) || 1)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="1"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Tavan m² Fiyatı (€)</label>
+                      <input
+                        type="number"
+                        value={ceilingPricePerSquareMeter || ''}
+                        onChange={(e) => setCeilingPricePerSquareMeter(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="bg-amber-100 p-2 rounded-lg w-full text-center">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Tavan: {(ceilingWidth * ceilingHeight * ceilingCount).toFixed(2)} m²
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          Fiyat: €{((ceilingWidth * ceilingHeight * ceilingCount) * ceilingPricePerSquareMeter).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Zemin hesaplama */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Zemin En (m)</label>
+                      <input
+                        type="number"
+                        value={floorWidth || ''}
+                        onChange={(e) => setFloorWidth(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Zemin Boy (m)</label>
+                      <input
+                        type="number"
+                        value={floorHeight || ''}
+                        onChange={(e) => setFloorHeight(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Zemin Adet</label>
+                      <input
+                        type="number"
+                        value={floorCount || ''}
+                        onChange={(e) => setFloorCount(parseInt(e.target.value) || 1)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="1"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Zemin m² Fiyatı (€)</label>
+                      <input
+                        type="number"
+                        value={floorPricePerSquareMeter || ''}
+                        onChange={(e) => setFloorPricePerSquareMeter(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="bg-amber-100 p-2 rounded-lg w-full text-center">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Zemin: {(floorWidth * floorHeight * floorCount).toFixed(2)} m²
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          Fiyat: €{((floorWidth * floorHeight * floorCount) * floorPricePerSquareMeter).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Duvar hesaplama */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Duvar En (m)</label>
+                      <input
+                        type="number"
+                        value={wallWidth || ''}
+                        onChange={(e) => setWallWidth(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Duvar Boy (m)</label>
+                      <input
+                        type="number"
+                        value={wallHeight || ''}
+                        onChange={(e) => setWallHeight(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Duvar Adet</label>
+                      <input
+                        type="number"
+                        value={wallCount || ''}
+                        onChange={(e) => setWallCount(parseInt(e.target.value) || 1)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="1"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Duvar m² Fiyatı (€)</label>
+                      <input
+                        type="number"
+                        value={wallPricePerSquareMeter || ''}
+                        onChange={(e) => setWallPricePerSquareMeter(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="bg-amber-100 p-2 rounded-lg w-full text-center">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Duvar: {(wallWidth * wallHeight * wallCount).toFixed(2)} m²
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          Fiyat: €{((wallWidth * wallHeight * wallCount) * wallPricePerSquareMeter).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Sepete ekle butonları */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <button
+                      onClick={() => addCeilingToCart()}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Tavanı Sepete Ekle
+                    </button>
+                    <button
+                      onClick={() => addFloorToCart()}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Zemini Sepete Ekle
+                    </button>
+                    <button
+                      onClick={() => addWallToCart()}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Duvarı Sepete Ekle
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Search and Filter */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <label className="block text-sm font-medium mb-2 text-amber-700">Ürün Ara</label>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                      placeholder="Ürün adı, marka veya model"
+                    />
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <label className="block text-sm font-medium mb-2 text-amber-700">Kategori</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full p-2 border rounded-lg select-text bg-amber-50 border-amber-200"
+                    >
+                      <option value="">Tüm Kategoriler</option>
+                      {categories.map((category) => (
+                        <option key={category} value={category} className="text-gray-800">
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Özet & Onay */}
+          {activeStep === 4 && (
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-lg p-6 border border-gray-100">
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">Özet & Onay</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h3 className="text-lg font-semibold mb-3 text-gray-700">Müşteri Bilgileri</h3>
+                  <p className="text-gray-600">Adı: {customerInfo.name}</p>
+                  <p className="text-gray-600">E-posta: {customerInfo.email}</p>
+                  <p className="text-gray-600">Telefon: {customerInfo.phone}</p>
+                  <p className="text-gray-600">Firma Adı: {customerInfo.company}</p>
+                  <p className="text-gray-600">Adres: {customerInfo.address}</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h3 className="text-lg font-semibold mb-3 text-gray-700">Proje Detayları</h3>
+                  <p className="text-gray-600">Proje Tasarımı: {projectDetails.projectDesign}</p>
+                  <p className="text-gray-600">Proje Açıklaması: {projectDetails.projectDescription}</p>
+                  <p className="text-gray-600">Başlangıç Tarihi: {schedule.startDate}</p>
+                  <p className="text-gray-600">Bitiş Tarihi: {schedule.endDate}</p>
+                  <p className="text-gray-600">Geçerlilik Süresi: {conditions.validityPeriod} gün</p>
+                  <p className="text-gray-600">Teslimat Süresi: {conditions.deliveryTime}</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h3 className="text-lg font-semibold mb-3 text-gray-700">Sepet</h3>
+                  <ul className="space-y-2">
+                    {cart.map((item, index) => (
+                      <li key={index} className="flex justify-between items-center">
+                        <span className="text-gray-600">{item.name}</span>
+                        <span className="text-gray-600">€{item.price.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-3">
+                    <div className="bg-green-100 p-3 rounded-lg">
+                      <p className="text-sm font-semibold text-green-800">
+                        Toplam Fiyat: €{totalPrice.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Grid */}
+                <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+                  {getFilteredProducts().map((product: Product) => (
+                    <div
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-white border-amber-200 cursor-pointer hover:bg-amber-50"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold text-amber-800">{product.name}</h3>
+                          <div className="flex gap-2 mt-1">
+                            {product.brand && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">{product.brand}</span>}
+                            {product.model && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">{product.model}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-amber-600">
+                            {product.price ? `${product.price} TL` : 'Fiyat Sorunuz'}
+                          </p>
+                          <p className="text-xs text-gray-500">Sepete eklemek için tıklayın</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cart */}
+              {cart.length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-xl shadow-lg p-6 border border-purple-100">
+                  <h3 className="text-lg font-semibold mb-3 text-purple-700">Sepet ({cart.length} ürün)</h3>
+                  
+                  {/* Grouping Controls */}
+                  {selectedProducts.length > 0 && (
+                    <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <button
+                        onClick={() => setIsGrouping(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Seçilen Ürünleri Grupla
+                      </button>
+                      <span className="ml-3 text-purple-700">
+                        {selectedProducts.length} ürün seçildi
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Grouping Modal */}
+                  {isGrouping && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                      <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold mb-4 text-purple-800">Grup Adı</h3>
+                        <input
+                          type="text"
+                          value={groupName}
+                          onChange={(e) => setGroupName(e.target.value)}
+                          placeholder="Grup adını girin"
+                          className="w-full p-3 border border-gray-300 rounded-lg mb-4 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          autoFocus
+                        />
+                        <div className="flex justify-end space-x-3">
+                          <button
+                            onClick={() => {
+                              setIsGrouping(false);
+                              setGroupName('');
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            onClick={createGroup}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                            Grupla
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Group Items Modal */}
+                  {viewingGroup && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                      <div className="bg-white p-6 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-semibold text-purple-800">
+                            {viewingGroup.product.name} (Grup)
+                          </h3>
+                          <button 
+                            onClick={() => setViewingGroup(null)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        
+                        <div className="mb-4 p-3 bg-purple-50 rounded-lg">
+                          <p className="text-sm text-purple-700">
+                            Bu grupta {viewingGroup.groupItems?.length} ürün bulunmaktadır.
+                          </p>
+                        </div>
+                        
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün</th>
+                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Adet</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Fiyat</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {viewingGroup.groupItems?.map((groupItem) => (
+                                <tr key={groupItem.product.id}>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {groupItem.customName || groupItem.product.name}
+                                    </div>
+                                    {groupItem.product.brand && (
+                                      <div className="text-sm text-gray-500">{groupItem.product.brand}</div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm text-gray-500">
+                                    {groupItem.quantity}
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-sm text-gray-500">
+                                    {(groupItem.salesPrice ?? groupItem.unitPrice).toFixed(2)} TL
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                                    {((groupItem.salesPrice ?? groupItem.unitPrice) * groupItem.quantity).toFixed(2)} TL
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot className="bg-gray-50">
+                              <tr>
+                                <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                                  Grup Toplamı:
+                                </td>
+                                <td className="px-4 py-3 text-right text-sm font-bold text-purple-700">
+                                  {viewingGroup.unitPrice.toFixed(2)} TL
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                        
+                        <div className="mt-6 flex justify-end space-x-3">
+                          <button
+                            onClick={() => {
+                              // Ungroup functionality
+                              const groupItems = viewingGroup?.groupItems || [];
+                              const groupId = viewingGroup?.product.id;
+                              
+                              if (groupId) {
+                                setCart(prev => [
+                                  ...prev.filter(item => item.product.id !== groupId),
+                                  ...groupItems
+                                ]);
+                              }
+                              setViewingGroup(null);
+                            }}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Gruptan Çıkar
+                          </button>
+                          <button
+                            onClick={() => setViewingGroup(null)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            Kapat
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-purple-100">
+                        <tr>
+                          <th className="px-4 py-3 text-center text-purple-800">
+                            <input
+                              type="checkbox"
+                              checked={selectedProducts.length > 0 && selectedProducts.length === cart.filter(item => !item.isGrouped).length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedProducts(cart.filter(item => !item.isGrouped).map(item => item.product.id));
+                                } else {
+                                  setSelectedProducts([]);
+                                }
+                              }}
+                              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            />
+                          </th>
+                          <th className="px-4 py-3 text-left text-purple-800">Ürün</th>
+                          <th className="px-4 py-3 text-center text-purple-800">Adet</th>
+                          <th className="px-4 py-3 text-right text-purple-800">Birim Fiyat</th>
+                          <th className="px-4 py-3 text-right text-purple-800">İskonto (%)</th>
+                          <th className="px-4 py-3 text-right text-purple-800">Kar (%)</th>
+                          <th className="px-4 py-3 text-right text-purple-800">Satış Fiyatı</th>
+                          <th className="px-4 py-3 text-right text-purple-800">Toplam</th>
+                          <th className="px-4 py-3 text-center text-purple-800">İşlem</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {cart.map((item) => (
+                          <tr key={item.product.id} className={`hover:bg-purple-50 ${item.isGrouped ? 'bg-purple-50' : ''}`}>
+                            <td className="px-4 py-3 text-center">
+                              {!item.isGrouped && (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedProducts.includes(item.product.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedProducts([...selectedProducts, item.product.id]);
+                                    } else {
+                                      setSelectedProducts(selectedProducts.filter(id => id !== item.product.id));
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                {item.isGrouped ? (
+                                  <div 
+                                    className="font-bold text-purple-800 flex items-center cursor-pointer hover:underline"
+                                    onClick={() => setViewingGroup(item)}
+                                  >
+                                    <span className="mr-2">📁</span>
+                                    {item.product.name}
+                                    <span className="ml-2 text-sm font-normal text-purple-600">
+                                      ({item.groupItems?.length} ürün)
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={item.customName || item.product.name}
+                                    onChange={(e) => updateProductName(item.product.id, e.target.value)}
+                                    className="font-semibold text-gray-800 w-full p-1 border rounded"
+                                  />
+                                )}
+                                {item.product.brand && !item.isGrouped && (
+                                  <div className="text-sm text-gray-600">{item.product.brand}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex items-center justify-center space-x-2">
+                                <button
+                                  onClick={() => {
+                                    if (item.isGrouped) {
+                                      updateGroupedItem(item.product.id, { quantity: Math.max(1, item.quantity - 1) });
+                                    } else {
+                                      updateQuantity(item.product.id, item.quantity - 1);
+                                    }
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
+                                >
+                                  -
+                                </button>
+                                <span className="w-12 text-center font-medium text-gray-800">{item.quantity}</span>
+                                <button
+                                  onClick={() => {
+                                    if (item.isGrouped) {
+                                      updateGroupedItem(item.product.id, { quantity: item.quantity + 1 });
+                                    } else {
+                                      updateQuantity(item.product.id, item.quantity + 1);
+                                    }
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-800">
+                              <input
+                                type="number"
+                                value={item.unitPrice}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  if (item.isGrouped) {
+                                    updateGroupedItem(item.product.id, { unitPrice: value });
+                                  } else {
+                                    updateUnitPrice(item.product.id, value);
+                                  }
+                                }}
+                                className="w-24 p-1 border rounded text-right"
+                                step="0.01"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-800">
+                              <input
+                                type="number"
+                                value={item.discount || 0}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  if (item.isGrouped) {
+                                    updateGroupedItem(item.product.id, { discount: value });
+                                  } else {
+                                    updateDiscount(item.product.id, value);
+                                  }
+                                }}
+                                className="w-20 p-1 border rounded text-right"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-800">
+                              <input
+                                type="number"
+                                value={item.margin || 0}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  if (item.isGrouped) {
+                                    updateGroupedItem(item.product.id, { margin: value });
+                                  } else {
+                                    updateMargin(item.product.id, value);
+                                  }
+                                }}
+                                className="w-20 p-1 border rounded text-right"
+                                step="0.1"
+                                min="0"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium text-gray-800">
+                              {((item.salesPrice ?? item.unitPrice) * item.quantity).toFixed(2)} TL
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium text-gray-800">
+                              {((item.salesPrice ?? item.unitPrice) * item.quantity).toFixed(2)} TL
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => {
+                                  if (item.isGrouped) {
+                                    removeGroupedItem(item.product.id);
+                                  } else {
+                                    removeFromCart(item.product.id);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800 font-medium"
+                              >
+                                Sil
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: Özet ve Onay */}
+          {activeStep === 4 && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-cyan-50 to-teal-50 rounded-xl shadow-lg p-6 border border-cyan-100">
+                <h2 className="text-2xl font-bold mb-6 text-cyan-800">Özet & Onay</h2>
+                
+                {/* Customer Summary */}
+                <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-cyan-100">
+                  <h3 className="text-lg font-semibold mb-3 text-cyan-700">Müşteri Bilgileri</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Müşteri Adı:</p>
+                      <p className="font-medium text-gray-800">{customerInfo.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">E-posta:</p>
+                      <p className="font-medium text-gray-800">{customerInfo.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Telefon:</p>
+                      <p className="font-medium text-gray-800">{customerInfo.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Firma:</p>
+                      <p className="font-medium text-gray-800">{customerInfo.company}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Summary */}
+                <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-cyan-100">
+                  <h3 className="text-lg font-semibold mb-3 text-cyan-700">Proje Detayları</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Proje Tasarımı:</p>
+                      <p className="font-medium text-gray-800">{projectDetails.projectDesign}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Proje Açıklaması:</p>
+                      <p className="font-medium text-gray-800">{projectDetails.projectDescription}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products Summary */}
+                <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-cyan-100">
+                  <h3 className="text-lg font-semibold mb-3 text-cyan-700">Seçilen Ürünler</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-cyan-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-cyan-800">Ürün</th>
+                          <th className="px-4 py-3 text-center text-cyan-800">Adet</th>
+                          <th className="px-4 py-3 text-right text-cyan-800">Birim Maliyet</th>
+                          <th className="px-4 py-3 text-right text-cyan-800">İskonto</th>
+                          <th className="px-4 py-3 text-right text-cyan-800">Kar</th>
+                          <th className="px-4 py-3 text-right text-cyan-800">Satış Fiyatı</th>
+                          <th className="px-4 py-3 text-right text-cyan-800">Toplam</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {cart.map((item) => {
+                          const discount = item.discount ?? 0;
+                          const margin = item.margin ?? 0;
+                          const discountedUnit = item.unitPrice * (1 - discount / 100);
+                          const salesPrice = item.salesPrice ?? (discountedUnit * (1 + margin / 100));
+                          const totalCost = discountedUnit * item.quantity;
+                          const totalProfit = (salesPrice - discountedUnit) * item.quantity;
+                          
+                          return (
+                            <tr key={item.product.id} className="hover:bg-cyan-50">
+                              <td className="px-4 py-3 text-gray-800">
+                                {item.isGrouped ? item.product.name : (item.customName || item.product.name)}
+                                {item.isGrouped && (
+                                  <span className="ml-2 text-xs text-cyan-600">(Grup)</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-center font-medium text-gray-800">{item.quantity}</td>
+                              <td className="px-4 py-3 text-right text-gray-800">{discountedUnit.toFixed(2)} TL</td>
+                              <td className="px-4 py-3 text-right text-gray-800">{discount}%</td>
+                              <td className="px-4 py-3 text-right text-gray-800">{margin}%</td>
+                              <td className="px-4 py-3 text-right text-gray-800">{salesPrice.toFixed(2)} TL</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-800">
+                                {(salesPrice * item.quantity).toFixed(2)} TL
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="border-t pt-4 bg-white p-4 rounded-lg shadow-sm">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Ara Toplam (Maliyet):</span>
+                      <span className="font-medium text-gray-800">{totalCost.toFixed(2)} TL</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Toplam Kar:</span>
+                      <span className="font-medium text-gray-800">{totalProfit.toFixed(2)} TL</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">KDV (%20):</span>
+                      <span className="font-medium text-gray-800">{kdv.toFixed(2)} TL</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold">
+                      <span className="text-cyan-700">Genel Toplam (Satış Fiyatı):</span>
+                      <span className="text-cyan-700">{total.toFixed(2)} TL</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create Quote Button */}
+                <div className="mt-6">
+                  <button
+                    onClick={createQuote}
+                    className="w-full bg-cyan-600 text-gray-800 py-3 rounded-lg hover:bg-cyan-700 font-semibold transition-colors"
+                  >
+                    Teklifi Oluştur
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="mt-6 flex justify-between">
+            <button
+              onClick={() => setActiveStep((prev) => Math.max(prev - 1, 1))}
+              disabled={activeStep === 1}
+              className={`px-6 py-2 rounded-lg ${
+                activeStep === 1
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-gray-600 text-gray-800 hover:bg-gray-700'
+              }`}
+            >
+              Geri
+            </button>
+            <button
+              onClick={() => setActiveStep((prev) => Math.min(prev + 1, 4))}
+              disabled={activeStep === 4}
+              className={`px-6 py-2 rounded-lg ${
+                activeStep === 4
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 text-gray-800 hover:bg-blue-700'
+              }`}
+            >
+              İleri
+            </button>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
