@@ -501,12 +501,11 @@ const generateQuotePDF = async (data)=>{
         <div style="display: flex; align-items: center; gap: 10px;">
           ${logoBase64 ? `
             <div style="text-align: center;">
-              <img src="${logoBase64}" style="width: 38px; height: 38px; border-radius: 6px; object-fit: cover; border: 1.5px solid #1e40af; background: white; display: block;" alt="Ekim Soğutma Logo" />
-              <div style="font-size: 5px; color: #64748b; font-weight: 600; margin-top: 2px; letter-spacing: 0.3px;">MET GRUP MARKASIDIR</div>
+              <img src="${logoBase64}" style="width: 120px; height: 60px; border-radius: 8px; object-fit: cover; border: 2px solid #1e40af; background: white; display: block;" alt="Ekim Soğutma Logo" />
+              <div style="font-size: 6px; color: #64748b; font-weight: 600; margin-top: 3px; letter-spacing: 0.3px;">MET GRUP MARKASIDIR</div>
             </div>
           ` : ''}
           <div>
-            <h1 style="font-size: 13px; margin: 0; font-weight: 800; color: #1e40af; letter-spacing: 0.5px;">EKİM SOĞUTMA</h1>
             <div style="font-size: 7px; color: #64748b; font-weight: 500; margin-top: 1px;">Profesyonel Soğutma ve Klima Sistemleri</div>
           </div>
         </div>

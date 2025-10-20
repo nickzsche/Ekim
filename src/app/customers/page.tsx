@@ -85,7 +85,7 @@ export default function CustomersPage() {
     if(selectedCustomer?.id) {
       async function fetchTransactions() {
         try {
-          const res = await fetch(`/api/customers/${selectedCustomer.id}/transactions`);
+          const res = await fetch(`/api/customers/${selectedCustomer!.id}/transactions`);
           if (res.ok) {
             const data = await res.json();
             setTransactions(data);
