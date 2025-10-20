@@ -426,9 +426,8 @@ __turbopack_context__.s([
     "generateQuotePDF",
     ()=>generateQuotePDF
 ]);
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jspdf$2f$dist$2f$jspdf$2e$es$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/jspdf/dist/jspdf.es.min.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$teklif$2d$formu$2f$node_modules$2f$html2canvas$2f$dist$2f$html2canvas$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/teklif-formu/node_modules/html2canvas/dist/html2canvas.js [app-client] (ecmascript)");
-;
+'use client';
 ;
 // Helper function to load image as base64
 const loadImageAsBase64 = async (imagePath)=>{
@@ -461,11 +460,15 @@ const loadImageAsBase64 = async (imagePath)=>{
 };
 const generateQuotePDF = async (data)=>{
     try {
+        const jsPDF = (await __turbopack_context__.A("[project]/teklif-formu/node_modules/jspdf/dist/jspdf.es.min.js [app-client] (ecmascript, async loader)")).default;
         console.log('PDF oluşturma başladı...');
-        // Load logo as base64
+        // Load logo and signature as base64
         console.log('Logo yükleniyor...');
         const logoBase64 = await loadImageAsBase64('/image/49125941466.jpg');
         console.log('Logo yükleme tamamlandı:', logoBase64 ? 'Başarılı' : 'Logo yok');
+        console.log('İmza yükleniyor...');
+        const signatureBase64 = await loadImageAsBase64('/image/imza.png');
+        console.log('İmza yükleme tamamlandı:', signatureBase64 ? 'Başarılı' : 'İmza yok');
         // Create a temporary container for the PDF content
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
@@ -489,7 +492,7 @@ const generateQuotePDF = async (data)=>{
             minimumFractionDigits: 2
         }), '<br/>\n      KDV (%20) Dahil Toplam: <span style="color:#dc2626;">€').concat((data.items.reduce((sum, item)=>sum + item.total, 0) * 1.2).toLocaleString('tr-TR', {
             minimumFractionDigits: 2
-        }), '</span>\n    </div>\n    <div style="font-size: 5px; margin-top: 1px;">• Ürünlere <strong>2 yıl garanti</strong></div>\n    <div style="font-size: 5px;">• Teklif sadece belirtilen ürünler için geçerli</div>\n    \n    <!-- Metrekare hesaplama detayları -->\n    ').concat(data.items.some((item)=>item.product.name.includes('Metrekare Hesaplama')) ? '\n      <div style="margin-top: 10px; padding: 8px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">\n        <div style="font-size: 8px; font-weight: 700; color: #0c4a6e; margin-bottom: 4px;">📐 Metrekare Hesaplama Detayları:</div>\n        <div style="font-size: 7px; color: #0c4a6e;">\n          Bu teklif, tavan, zemin ve duvar alanlarının ayrı ayrı hesaplanmasından oluşmaktadır. \n          Her bir alan için en, boy ve adet değerleri girilerek toplam metrekare hesaplanmıştır.\n        </div>\n      </div>\n    ' : '', '\n  </div>\n\n      <!-- İmza için daha geniş boşluk ve yazılar -->\n      <div style="height: 60px; position: relative;">\n        <div style="position: absolute; left: 24px; bottom: 6px; font-size: 9px; font-weight: bold; color: #1e293b;">Ekim Soğutma</div>\n        <div style="position: absolute; right: 24px; bottom: 6px; font-size: 9px; font-weight: bold; color: #1e293b;">Müşteri Onayı</div>\n      </div>\n\n      <!-- Footer -->\n      <div style="position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; padding: 12px 0 8px 0; border-radius: 10px 10px 0 0; text-align: center; font-size: 10px; width: 100%; margin: 0; z-index: 10; display: block;">\n        <div style="font-size: 10px; opacity: 0.9; display: flex; justify-content: center; gap: 10px;">\n          <span>🌐 www.ekimsogutma.com</span>\n          <span>✉️ info@ekimsogutma.com</span>\n          <span>📞 +90 (532) 123 45 67</span>\n        </div>\n        <p style="margin: 4px 0 0 0; font-size: 9px; opacity: 0.7;">© ').concat(new Date().getFullYear(), " Ekim Soğutma. Tüm hakları saklıdır.</p>\n      </div>\n    </div>\n  ");
+        }), '</span>\n    </div>\n    <div style="font-size: 5px; margin-top: 1px;">• Ürünlere <strong>2 yıl garanti</strong></div>\n    <div style="font-size: 5px;">• Teklif sadece belirtilen ürünler için geçerli</div>\n    \n    <!-- Metrekare hesaplama detayları -->\n    ').concat(data.items.some((item)=>item.product.name.includes('Metrekare Hesaplama')) ? '\n      <div style="margin-top: 10px; padding: 8px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">\n        <div style="font-size: 8px; font-weight: 700; color: #0c4a6e; margin-bottom: 4px;">📐 Metrekare Hesaplama Detayları:</div>\n        <div style="font-size: 7px; color: #0c4a6e;">\n          Bu teklif, tavan, zemin ve duvar alanlarının ayrı ayrı hesaplanmasından oluşmaktadır. \n          Her bir alan için en, boy ve adet değerleri girilerek toplam metrekare hesaplanmıştır.\n        </div>\n      </div>\n    ' : '', '\n  </div>\n\n      <!-- İmza için daha geniş boşluk ve yazılar -->\n      <div style="height: 80px; position: relative;">\n        <div style="position: absolute; left: 24px; bottom: 30px;">\n          ').concat(signatureBase64 ? '<img src="'.concat(signatureBase64, '" style="width: 120px; height: auto; max-height: 50px; object-fit: contain;" alt="İmza" />') : '', '\n          <div style="font-size: 9px; font-weight: bold; color: #1e293b; margin-top: 2px;">Ekim Soğutma</div>\n        </div>\n        <div style="position: absolute; right: 24px; bottom: 6px; font-size: 9px; font-weight: bold; color: #1e293b;">Müşteri Onayı</div>\n      </div>\n\n      <!-- Footer -->\n      <div style="position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; padding: 12px 0 8px 0; border-radius: 10px 10px 0 0; text-align: center; font-size: 10px; width: 100%; margin: 0; z-index: 10; display: block;">\n        <div style="font-size: 10px; opacity: 0.9; display: flex; justify-content: center; gap: 10px;">\n          <span>🌐 www.ekimsogutma.com</span>\n          <span>✉️ info@ekimsogutma.com</span>\n          <span>📞 +90 (532) 123 45 67</span>\n        </div>\n        <p style="margin: 4px 0 0 0; font-size: 9px; opacity: 0.7;">© ').concat(new Date().getFullYear(), " Ekim Soğutma. Tüm hakları saklıdır.</p>\n      </div>\n    </div>\n  ");
         // Add the temporary div to the document
         document.body.appendChild(tempDiv);
         try {
@@ -506,7 +509,7 @@ const generateQuotePDF = async (data)=>{
             // Create PDF (tek sayfa)
             console.log('PDF oluşturuluyor...');
             const imgData = canvas.toDataURL('image/png');
-            const pdf = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jspdf$2f$dist$2f$jspdf$2e$es$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"]('p', 'mm', 'a4');
+            const pdf = new jsPDF('p', 'mm', 'a4');
             const imgWidth = 210; // A4 width in mm
             const imgHeight = 297; // A4 height in mm
             pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);

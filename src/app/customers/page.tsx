@@ -82,7 +82,7 @@ export default function CustomersPage() {
 
   // Cari hareketleri çek (seçili müşteri için)
   useEffect(() => {
-    if(selectedCustomer && selectedCustomer.id) {
+    if(selectedCustomer?.id) {
       async function fetchTransactions() {
         try {
           const res = await fetch(`/api/customers/${selectedCustomer.id}/transactions`);
@@ -92,8 +92,8 @@ export default function CustomersPage() {
           } else {
             setTransactions([]);
           }
-        } catch (e) {
-          console.error('Cari hareketler alınamadı:', e);
+        } catch {
+          console.error('Cari hareketler alınamadı');
           setTransactions([]);
         }
       }

@@ -79,10 +79,14 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
     const jsPDF = (await import('jspdf')).default;
     console.log('PDF oluşturma başladı...');
     
-    // Load logo as base64
+    // Load logo and signature as base64
     console.log('Logo yükleniyor...');
     const logoBase64 = await loadImageAsBase64('/image/49125941466.jpg');
     console.log('Logo yükleme tamamlandı:', logoBase64 ? 'Başarılı' : 'Logo yok');
+    
+    console.log('İmza yükleniyor...');
+    const signatureBase64 = await loadImageAsBase64('/image/imza.png');
+    console.log('İmza yükleme tamamlandı:', signatureBase64 ? 'Başarılı' : 'İmza yok');
     
     // Create a temporary container for the PDF content
     const tempDiv = document.createElement('div');
@@ -202,8 +206,11 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   </div>
 
       <!-- İmza için daha geniş boşluk ve yazılar -->
-      <div style="height: 60px; position: relative;">
-        <div style="position: absolute; left: 24px; bottom: 6px; font-size: 9px; font-weight: bold; color: #1e293b;">Ekim Soğutma</div>
+      <div style="height: 80px; position: relative;">
+        <div style="position: absolute; left: 24px; bottom: 30px;">
+          ${signatureBase64 ? `<img src="${signatureBase64}" style="width: 120px; height: auto; max-height: 50px; object-fit: contain;" alt="İmza" />` : ''}
+          <div style="font-size: 9px; font-weight: bold; color: #1e293b; margin-top: 2px;">Ekim Soğutma</div>
+        </div>
         <div style="position: absolute; right: 24px; bottom: 6px; font-size: 9px; font-weight: bold; color: #1e293b;">Müşteri Onayı</div>
       </div>
 
