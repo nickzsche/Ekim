@@ -3,10 +3,11 @@ import { getDatabase } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const quoteId = parseInt(params.id);
+    const { id } = await params;
+    const quoteId = parseInt(id);
     const db = getDatabase();
     
     // Get quote with items
@@ -46,10 +47,11 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const quoteId = parseInt(params.id);
+    const { id } = await params;
+    const quoteId = parseInt(id);
     const db = getDatabase();
     
     // Check if quote exists

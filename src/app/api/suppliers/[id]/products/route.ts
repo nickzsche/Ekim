@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
 
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  [key: string]: unknown;
+}
+
 // GET - Tedarikçinin ürünlerini kategorilere göre gruplu getir
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
     
     // Tedarikçinin tüm ürünlerini getir
@@ -14,12 +22,12 @@ export async function GET(
       SELECT * FROM products 
       WHERE supplier_id = ? 
       ORDER BY category, name
-    `).all(params.id);
+    `).all(id) as Product[];
 
     // Kategorilere göre grupla
-    const categorizedProducts: Record<string, any[]> = {};
+    const categorizedProducts: Record<string, Product[]> = {};
     
-    products.forEach((product: any) => {
+    products.forEach((product: Product) => {
       const category = product.category || 'Diğer';
       if (!categorizedProducts[category]) {
         categorizedProducts[category] = [];
@@ -28,7 +36,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      supplierId: params.id,
+      supplierId: id,
       categories: categorizedProducts
     });
   } catch (error) {

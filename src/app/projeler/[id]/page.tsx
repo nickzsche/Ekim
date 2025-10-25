@@ -33,8 +33,16 @@ export default function ProjectEditPage() {
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   
+  interface Supplier {
+    id: number;
+    name: string;
+    contact_person?: string;
+    email?: string;
+    phone?: string;
+  }
+  
   // Tedarikçi bazlı ürün seçimi
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [supplierCategories, setSupplierCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');

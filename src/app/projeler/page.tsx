@@ -97,8 +97,18 @@ export default function ProjectsPage() {
       
       if (!customer) throw new Error('Müşteri bulunamadı');
 
+      interface ProjectItem {
+        product_name?: string;
+        brand?: string;
+        model?: string;
+        code?: string;
+        quantity?: number;
+        sales_price?: number;
+        unit_price?: number;
+      }
+
       // PDF için ürün listesini hazırla - items yoksa boş array kullan
-      const items = (projectData.items || []).map((item: any) => ({
+      const items = (projectData.items || []).map((item: ProjectItem) => ({
         product: {
           name: item.product_name || 'İsimsiz Ürün',
           brand: item.brand || '',
@@ -112,7 +122,7 @@ export default function ProjectsPage() {
 
       console.log('PDF için hazırlanan items:', items);
 
-      const subtotal = items.reduce((sum: number, item: any) => sum + item.total, 0);
+      const subtotal = items.reduce((sum: number, item: { total: number }) => sum + item.total, 0);
       const kdv = subtotal * 0.2;
       const total = subtotal + kdv;
 
