@@ -21,17 +21,6 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             {/* Enhanced Navigation Links */}
             <Link 
-              href="/products" 
-              className="group relative px-3 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:shadow-lg"
-            >
-              <div className="flex items-center space-x-2">
-                <span className="text-xl group-hover:scale-110 transition-transform duration-300">📦</span>
-                <span className="font-bold text-sm text-gray-800 group-hover:text-green-600 transition-colors duration-300">Ürünler</span>
-              </div>
-              <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 group-hover:w-full group-hover:left-0"></div>
-            </Link>
-            
-            <Link 
               href="/customers" 
               className="group relative px-3 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-lg"
             >

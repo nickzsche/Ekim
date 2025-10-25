@@ -31,6 +31,11 @@ const steps = [
 ];
 
 export default function Home() {
+  // Login state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  
   // States for navigation and UI
   const [activeStep, setActiveStep] = useState(1);
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -88,12 +93,36 @@ export default function Home() {
   const [wallCount, setWallCount] = useState<number>(1);
   const [wallPricePerSquareMeter, setWallPricePerSquareMeter] = useState<number>(0);
   
+  // Kapı için state'ler (hesaplama değil, direkt giriş)
+  const [doorWidth, setDoorWidth] = useState<number>(0);
+  const [doorHeight, setDoorHeight] = useState<number>(0);
+  const [doorPrice, setDoorPrice] = useState<number>(0);
+  
   // Tedarikçi bazlı ürün seçimi için state'ler
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [supplierCategories, setSupplierCategories] = useState<string[]>([]);
   const [supplierSelectedCategory, setSupplierSelectedCategory] = useState('');
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  
+  // Sarf Malzeme (Bakır Boru ve Kablo) için state'ler
+  const [copperPipeLength, setCopperPipeLength] = useState<number>(0);
+  const [copperPipePricePerMeter, setCopperPipePricePerMeter] = useState<number>(0);
+  const [cableLength, setCableLength] = useState<number>(0);
+  const [cablePricePerMeter, setCablePricePerMeter] = useState<number>(0);
+  
+  // Aksesuar Hesaplama için state'ler
+  const [interiorAccessoryLength, setInteriorAccessoryLength] = useState<number>(0);
+  const [interiorAccessoryCount, setInteriorAccessoryCount] = useState<number>(1);
+  const [interiorAccessoryUnitPrice, setInteriorAccessoryUnitPrice] = useState<number>(0);
+  
+  const [exteriorAccessoryLength, setExteriorAccessoryLength] = useState<number>(0);
+  const [exteriorAccessoryCount, setExteriorAccessoryCount] = useState<number>(1);
+  const [exteriorAccessoryUnitPrice, setExteriorAccessoryUnitPrice] = useState<number>(0);
+  
+  const [floorUWaterLength, setFloorUWaterLength] = useState<number>(0);
+  const [floorUWaterCount, setFloorUWaterCount] = useState<number>(1);
+  const [floorUWaterUnitPrice, setFloorUWaterUnitPrice] = useState<number>(0);
   
   // Tavan, zemin ve duvar için ayrı hesaplama fonksiyonları
   const ceilingSquareMeters = ceilingWidth * ceilingHeight * ceilingCount;
@@ -104,6 +133,15 @@ export default function Home() {
   
   const wallSquareMeters = wallWidth * wallHeight * wallCount;
   const wallTotalPrice = wallSquareMeters * wallPricePerSquareMeter;
+
+  // Sarf Malzeme hesaplamaları
+  const copperPipeTotalPrice = copperPipeLength * copperPipePricePerMeter;
+  const cableTotalPrice = cableLength * cablePricePerMeter;
+  
+  // Aksesuar hesaplamaları (Boy × Adet × Birim Fiyat)
+  const interiorAccessoryTotalPrice = interiorAccessoryLength * interiorAccessoryCount * interiorAccessoryUnitPrice;
+  const exteriorAccessoryTotalPrice = exteriorAccessoryLength * exteriorAccessoryCount * exteriorAccessoryUnitPrice;
+  const floorUWaterTotalPrice = floorUWaterLength * floorUWaterCount * floorUWaterUnitPrice;
 
   // Memoized filtered products
   const getFilteredProducts = () => products.filter((product) => {
@@ -117,6 +155,14 @@ export default function Home() {
     
     return matchesSearch && matchesCategory;
   });
+
+  // Check localStorage for authentication on component mount
+  useEffect(() => {
+    const authStatus = localStorage.getItem('ekimAuth');
+    if (authStatus === 'authenticated') {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -243,6 +289,24 @@ export default function Home() {
     setSelectedProducts([]);
     setIsGrouping(false);
     setGroupName('');
+  };
+
+  // Login function
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginForm.username === 'Bozkurt' && loginForm.password === 'OtukendenKuzeye34!') {
+      setIsAuthenticated(true);
+      setLoginError('');
+      localStorage.setItem('ekimAuth', 'authenticated');
+    } else {
+      setLoginError('Kullanıcı adı veya şifre hatalı!');
+    }
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('ekimAuth');
   };
 
   // Cart management functions
@@ -404,6 +468,228 @@ export default function Home() {
     setWallHeight(0);
     setWallCount(1);
     setWallPricePerSquareMeter(0);
+  };
+  
+  // Kapı sepete ekleme (direkt en, boy, fiyat girişi)
+  const addDoorToCart = () => {
+    if (doorWidth <= 0 || doorHeight <= 0) {
+      alert('Lütfen geçerli kapı en ve boy değerleri girin');
+      return;
+    }
+    
+    if (doorPrice <= 0) {
+      alert('Lütfen kapı fiyatı girin');
+      return;
+    }
+    
+    const detailedDescription = `Kapı: ${doorWidth.toFixed(2)}m × ${doorHeight.toFixed(2)}m`;
+    
+    const doorProduct: Product = {
+      id: Date.now() + 4,
+      name: `Kapı (${doorWidth.toFixed(2)}m × ${doorHeight.toFixed(2)}m)`,
+      price: doorPrice,
+      category: 'Panel Hesaplama',
+      stock_quantity: 1,
+      unit: 'adet',
+      description: detailedDescription
+    };
+    
+    setCart([
+      ...cart,
+      {
+        product: doorProduct,
+        quantity: 1,
+        unitPrice: doorPrice,
+        discount: 0,
+        margin: 0,
+        customName: `Kapı (${doorWidth.toFixed(2)}m × ${doorHeight.toFixed(2)}m)`,
+        salesPrice: doorPrice,
+        manualSalesPrice: false
+      }
+    ]);
+    
+    // Kapı alanlarını sıfırla
+    setDoorWidth(0);
+    setDoorHeight(0);
+    setDoorPrice(0);
+  };
+  
+  // Bakır Boru sepete ekleme
+  const addCopperPipeToCart = () => {
+    if (copperPipeLength <= 0) {
+      alert('Lütfen geçerli bakır boru uzunluğu girin');
+      return;
+    }
+    if (copperPipePricePerMeter <= 0) {
+      alert('Lütfen bakır boru metre fiyatı girin');
+      return;
+    }
+    
+    const copperPipeProduct: Product = {
+      id: Date.now() + 10,
+      name: `Bakır Boru (${copperPipeLength.toFixed(2)} m)`,
+      price: copperPipeTotalPrice,
+      category: 'Sarf Malzeme',
+      stock_quantity: 1,
+      unit: 'm',
+      description: `Bakır Boru: ${copperPipeLength.toFixed(2)} m × €${copperPipePricePerMeter.toFixed(2)}/m`
+    };
+    
+    setCart([...cart, {
+      product: copperPipeProduct,
+      quantity: 1,
+      unitPrice: copperPipeTotalPrice,
+      discount: 0,
+      margin: 0,
+      salesPrice: copperPipeTotalPrice,
+      manualSalesPrice: false
+    }]);
+    
+    setCopperPipeLength(0);
+    setCopperPipePricePerMeter(0);
+  };
+  
+  // Kablo sepete ekleme
+  const addCableToCart = () => {
+    if (cableLength <= 0) {
+      alert('Lütfen geçerli kablo uzunluğu girin');
+      return;
+    }
+    if (cablePricePerMeter <= 0) {
+      alert('Lütfen kablo metre fiyatı girin');
+      return;
+    }
+    
+    const cableProduct: Product = {
+      id: Date.now() + 11,
+      name: `Kablo (${cableLength.toFixed(2)} m)`,
+      price: cableTotalPrice,
+      category: 'Sarf Malzeme',
+      stock_quantity: 1,
+      unit: 'm',
+      description: `Kablo: ${cableLength.toFixed(2)} m × €${cablePricePerMeter.toFixed(2)}/m`
+    };
+    
+    setCart([...cart, {
+      product: cableProduct,
+      quantity: 1,
+      unitPrice: cableTotalPrice,
+      discount: 0,
+      margin: 0,
+      salesPrice: cableTotalPrice,
+      manualSalesPrice: false
+    }]);
+    
+    setCableLength(0);
+    setCablePricePerMeter(0);
+  };
+  
+  // İç Aksesuar sepete ekleme
+  const addInteriorAccessoryToCart = () => {
+    if (interiorAccessoryLength <= 0 || interiorAccessoryCount <= 0) {
+      alert('Lütfen geçerli boy ve adet değerleri girin');
+      return;
+    }
+    if (interiorAccessoryUnitPrice <= 0) {
+      alert('Lütfen birim fiyat girin');
+      return;
+    }
+    
+    const accessoryProduct: Product = {
+      id: Date.now() + 20,
+      name: `İç Aksesuar`,
+      price: interiorAccessoryTotalPrice,
+      category: 'Aksesuar',
+      stock_quantity: 1,
+      unit: 'adet',
+      description: `İç Aksesuar: ${interiorAccessoryLength.toFixed(2)} × ${interiorAccessoryCount} × €${interiorAccessoryUnitPrice.toFixed(2)}`
+    };
+    
+    setCart([...cart, {
+      product: accessoryProduct,
+      quantity: 1,
+      unitPrice: interiorAccessoryTotalPrice,
+      discount: 0,
+      margin: 0,
+      salesPrice: interiorAccessoryTotalPrice,
+      manualSalesPrice: false
+    }]);
+    
+    setInteriorAccessoryLength(0);
+    setInteriorAccessoryCount(1);
+    setInteriorAccessoryUnitPrice(0);
+  };
+  
+  // Dış Aksesuar sepete ekleme
+  const addExteriorAccessoryToCart = () => {
+    if (exteriorAccessoryLength <= 0 || exteriorAccessoryCount <= 0) {
+      alert('Lütfen geçerli boy ve adet değerleri girin');
+      return;
+    }
+    if (exteriorAccessoryUnitPrice <= 0) {
+      alert('Lütfen birim fiyat girin');
+      return;
+    }
+    
+    const accessoryProduct: Product = {
+      id: Date.now() + 21,
+      name: `Dış Aksesuar`,
+      price: exteriorAccessoryTotalPrice,
+      category: 'Aksesuar',
+      stock_quantity: 1,
+      unit: 'adet',
+      description: `Dış Aksesuar: ${exteriorAccessoryLength.toFixed(2)} × ${exteriorAccessoryCount} × €${exteriorAccessoryUnitPrice.toFixed(2)}`
+    };
+    
+    setCart([...cart, {
+      product: accessoryProduct,
+      quantity: 1,
+      unitPrice: exteriorAccessoryTotalPrice,
+      discount: 0,
+      margin: 0,
+      salesPrice: exteriorAccessoryTotalPrice,
+      manualSalesPrice: false
+    }]);
+    
+    setExteriorAccessoryLength(0);
+    setExteriorAccessoryCount(1);
+    setExteriorAccessoryUnitPrice(0);
+  };
+  
+  // Zemin U Su sepete ekleme
+  const addFloorUWaterToCart = () => {
+    if (floorUWaterLength <= 0 || floorUWaterCount <= 0) {
+      alert('Lütfen geçerli boy ve adet değerleri girin');
+      return;
+    }
+    if (floorUWaterUnitPrice <= 0) {
+      alert('Lütfen birim fiyat girin');
+      return;
+    }
+    
+    const accessoryProduct: Product = {
+      id: Date.now() + 22,
+      name: `Zemin U Su`,
+      price: floorUWaterTotalPrice,
+      category: 'Aksesuar',
+      stock_quantity: 1,
+      unit: 'adet',
+      description: `Zemin U Su: ${floorUWaterLength.toFixed(2)} × ${floorUWaterCount} × €${floorUWaterUnitPrice.toFixed(2)}`
+    };
+    
+    setCart([...cart, {
+      product: accessoryProduct,
+      quantity: 1,
+      unitPrice: floorUWaterTotalPrice,
+      discount: 0,
+      margin: 0,
+      salesPrice: floorUWaterTotalPrice,
+      manualSalesPrice: false
+    }]);
+    
+    setFloorUWaterLength(0);
+    setFloorUWaterCount(1);
+    setFloorUWaterUnitPrice(0);
   };
   
   // Cart item update functions
@@ -775,6 +1061,67 @@ Teslim: ${conditions.deliveryTime}`
     );
   }
 
+  // Login screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">🔐 Giriş Yap</h1>
+            <p className="text-gray-600">Ekim Soğutma Teklif Sistemi</p>
+          </div>
+          
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Kullanıcı Adı
+              </label>
+              <input
+                type="text"
+                value={loginForm.username}
+                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-400"
+                placeholder="Kullanıcı adınızı girin"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Şifre
+              </label>
+              <input
+                type="password"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-400"
+                placeholder="Şifrenizi girin"
+                required
+              />
+            </div>
+            
+            {loginError && (
+              <div className="bg-red-50 border-2 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm font-semibold">
+                ❌ {loginError}
+              </div>
+            )}
+            
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+            >
+              Giriş Yap →
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center text-sm text-gray-500">
+            © 2024 Ekim Soğutma
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       <Header />
@@ -967,9 +1314,13 @@ Teslim: ${conditions.deliveryTime}`
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-lg p-6 border border-amber-100">
               <h2 className="text-2xl font-bold mb-6 text-amber-800">Ürün Seçimi</h2>
               <div className="mb-6">
-                {/* Square Meter Calculator */}
-                <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-amber-200">
-                  <h3 className="text-md font-semibold mb-3 text-amber-700">Metrekare Hesaplama</h3>
+                {/* Panel Hesaplama - Accordion */}
+                <details open className="bg-white rounded-lg shadow-sm mb-4 border border-amber-200">
+                  <summary className="cursor-pointer p-4 font-semibold text-amber-700 hover:bg-amber-50 rounded-lg flex items-center justify-between">
+                    <span>📐 Panel Hesaplama</span>
+                    <span className="text-xl">▼</span>
+                  </summary>
+                  <div className="p-4 pt-0">
                   
                   {/* Tavan hesaplama */}
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -1154,8 +1505,58 @@ Teslim: ${conditions.deliveryTime}`
                     </div>
                   </div>
                   
+                  {/* Kapı girişi */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Kapı En (m)</label>
+                      <input
+                        type="number"
+                        value={doorWidth || ''}
+                        onChange={(e) => setDoorWidth(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Kapı Boy (m)</label>
+                      <input
+                        type="number"
+                        value={doorHeight || ''}
+                        onChange={(e) => setDoorHeight(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-amber-700">Fiyat (€)</label>
+                      <input
+                        type="number"
+                        value={doorPrice || ''}
+                        onChange={(e) => setDoorPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full p-2 border rounded-lg form-input bg-amber-50 border-amber-200"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="bg-amber-100 p-2 rounded-lg w-full text-center">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Kapı: {doorWidth > 0 ? doorWidth.toFixed(2) : '0'}m × {doorHeight > 0 ? doorHeight.toFixed(2) : '0'}m
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          Fiyat: €{doorPrice > 0 ? doorPrice.toFixed(2) : '0.00'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {/* Sepete ekle butonları */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
                     <button
                       onClick={() => addCeilingToCart()}
                       className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
@@ -1174,8 +1575,300 @@ Teslim: ${conditions.deliveryTime}`
                     >
                       Duvarı Sepete Ekle
                     </button>
+                    <button
+                      onClick={() => addDoorToCart()}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Kapıyı Sepete Ekle
+                    </button>
                   </div>
-                </div>
+                  </div>
+                </details>
+                
+                {/* Sarf Malzeme Hesaplama - Accordion */}
+                <details className="bg-white rounded-lg shadow-sm mb-4 border border-blue-200">
+                  <summary className="cursor-pointer p-4 font-semibold text-blue-700 hover:bg-blue-50 rounded-lg flex items-center justify-between">
+                    <span>🔧 Sarf Malzeme Hesaplama</span>
+                    <span className="text-xl">▼</span>
+                  </summary>
+                  <div className="p-4 pt-0">
+                  
+                  {/* Bakır Boru Hesaplama */}
+                  <div className="mb-4 pb-4 border-b border-blue-100">
+                    <h4 className="text-sm font-semibold mb-3 text-blue-600">Bakır Boru</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-blue-700">Uzunluk (m)</label>
+                        <input
+                          type="number"
+                          value={copperPipeLength || ''}
+                          onChange={(e) => setCopperPipeLength(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-blue-700">Metre Fiyatı (€)</label>
+                        <input
+                          type="number"
+                          value={copperPipePricePerMeter || ''}
+                          onChange={(e) => setCopperPipePricePerMeter(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={addCopperPipeToCart}
+                          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Bakır Boru Ekle
+                        </button>
+                      </div>
+                    </div>
+                    {copperPipeTotalPrice > 0 && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                        <p className="font-semibold text-blue-800">
+                          Toplam: €{copperPipeTotalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Kablo Hesaplama */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3 text-blue-600">Kablo</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-blue-700">Uzunluk (m)</label>
+                        <input
+                          type="number"
+                          value={cableLength || ''}
+                          onChange={(e) => setCableLength(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-blue-700">Metre Fiyatı (€)</label>
+                        <input
+                          type="number"
+                          value={cablePricePerMeter || ''}
+                          onChange={(e) => setCablePricePerMeter(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={addCableToCart}
+                          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Kablo Ekle
+                        </button>
+                      </div>
+                    </div>
+                    {cableTotalPrice > 0 && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                        <p className="font-semibold text-blue-800">
+                          Toplam: €{cableTotalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  </div>
+                </details>
+                
+                {/* Aksesuar Hesaplama - Accordion */}
+                <details className="bg-white rounded-lg shadow-sm mb-4 border border-green-200">
+                  <summary className="cursor-pointer p-4 font-semibold text-green-700 hover:bg-green-50 rounded-lg flex items-center justify-between">
+                    <span>🔩 Aksesuar Hesaplama</span>
+                    <span className="text-xl">▼</span>
+                  </summary>
+                  <div className="p-4 pt-0">
+                  
+                  {/* İç Aksesuar */}
+                  <div className="mb-4 pb-4 border-b border-green-100">
+                    <h4 className="text-sm font-semibold mb-3 text-green-600">İç Aksesuar</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Boy</label>
+                        <input
+                          type="number"
+                          value={interiorAccessoryLength || ''}
+                          onChange={(e) => setInteriorAccessoryLength(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Adet</label>
+                        <input
+                          type="number"
+                          value={interiorAccessoryCount || ''}
+                          onChange={(e) => setInteriorAccessoryCount(e.target.value === '' ? 1 : parseInt(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="1"
+                          min="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Birim Fiyat (€)</label>
+                        <input
+                          type="number"
+                          value={interiorAccessoryUnitPrice || ''}
+                          onChange={(e) => setInteriorAccessoryUnitPrice(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={addInteriorAccessoryToCart}
+                          className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                        >
+                          İç Aks. Ekle
+                        </button>
+                      </div>
+                    </div>
+                    {interiorAccessoryTotalPrice > 0 && (
+                      <div className="mt-2 p-2 bg-green-50 rounded text-sm">
+                        <p className="font-semibold text-green-800">
+                          Toplam: €{interiorAccessoryTotalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Dış Aksesuar */}
+                  <div className="mb-4 pb-4 border-b border-green-100">
+                    <h4 className="text-sm font-semibold mb-3 text-green-600">Dış Aksesuar</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Boy</label>
+                        <input
+                          type="number"
+                          value={exteriorAccessoryLength || ''}
+                          onChange={(e) => setExteriorAccessoryLength(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Adet</label>
+                        <input
+                          type="number"
+                          value={exteriorAccessoryCount || ''}
+                          onChange={(e) => setExteriorAccessoryCount(e.target.value === '' ? 1 : parseInt(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="1"
+                          min="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Birim Fiyat (€)</label>
+                        <input
+                          type="number"
+                          value={exteriorAccessoryUnitPrice || ''}
+                          onChange={(e) => setExteriorAccessoryUnitPrice(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={addExteriorAccessoryToCart}
+                          className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Dış Aks. Ekle
+                        </button>
+                      </div>
+                    </div>
+                    {exteriorAccessoryTotalPrice > 0 && (
+                      <div className="mt-2 p-2 bg-green-50 rounded text-sm">
+                        <p className="font-semibold text-green-800">
+                          Toplam: €{exteriorAccessoryTotalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Zemin U Su */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3 text-green-600">Zemin U Su</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Boy</label>
+                        <input
+                          type="number"
+                          value={floorUWaterLength || ''}
+                          onChange={(e) => setFloorUWaterLength(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Adet</label>
+                        <input
+                          type="number"
+                          value={floorUWaterCount || ''}
+                          onChange={(e) => setFloorUWaterCount(e.target.value === '' ? 1 : parseInt(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="1"
+                          min="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-green-700">Birim Fiyat (€)</label>
+                        <input
+                          type="number"
+                          value={floorUWaterUnitPrice || ''}
+                          onChange={(e) => setFloorUWaterUnitPrice(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                          className="w-full p-2 border-2 border-black rounded-lg bg-black text-white"
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={addFloorUWaterToCart}
+                          className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Zemin U Su Ekle
+                        </button>
+                      </div>
+                    </div>
+                    {floorUWaterTotalPrice > 0 && (
+                      <div className="mt-2 p-2 bg-green-50 rounded text-sm">
+                        <p className="font-semibold text-green-800">
+                          Toplam: €{floorUWaterTotalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  </div>
+                </details>
                 
                 {/* Supplier-based Product Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

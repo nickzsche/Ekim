@@ -113,7 +113,7 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
           ` : ''}
           <div style="font-size: 10px; color: #64748b; margin-top: 8px;">Profesyonel Soğutma ve Klima Sistemleri</div>
           <div style="font-size: 9px; color: #334155; margin-top: 8px;">
-            <div>📞 +90 (532) 123 45 67</div>
+            <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
             <div>✉️ info@ekimsogutma.com</div>
             <div>🌐 www.ekimsogutma.com</div>
           </div>
@@ -213,7 +213,7 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
         <div style="font-size: 10px; margin-bottom: 8px;">
           <span style="margin: 0 10px;">🌐 www.ekimsogutma.com</span>
           <span style="margin: 0 10px;">✉️ info@ekimsogutma.com</span>
-          <span style="margin: 0 10px;">📞 +90 (532) 123 45 67</span>
+          <span style="margin: 0 10px;">📞 +90 532 701 6283 / +90 542 457 2553</span>
         </div>
         <div style="font-size: 9px; opacity: 0.8;">© ${new Date().getFullYear()} Ekim Soğutma. Tüm hakları saklıdır.</div>
       </div>
@@ -229,7 +229,7 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
     const canvas = await html2canvas(tempDiv, {
       useCORS: true,
       allowTaint: true,
-      background: '#ffffff'
+      backgroundColor: '#ffffff'
     });
     console.log('Canvas oluşturuldu');
 

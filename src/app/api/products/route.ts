@@ -18,12 +18,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const product: Product = await request.json();
+    const product: any = await request.json();
     const db = getDatabase();
     
     const stmt = db.prepare(`
-      INSERT INTO products (name, code, brand, model, category, price, description, specifications, stock_quantity, unit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (name, code, brand, model, category, price, description, specifications, stock_quantity, unit, supplier_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
       product.description || null,
       product.specifications || null,
       product.stock_quantity || 0,
-      product.unit || 'adet'
+      product.unit || 'adet',
+      product.supplier_id || null
     );
     
     const newProduct = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);

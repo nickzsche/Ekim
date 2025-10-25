@@ -152,13 +152,16 @@ export default function SuppliersPage() {
     }
   };
 
-  // Kategori CRUD
+  // Kategori CRUD  
   const handleAddCategory = () => {
-    setNewCategoryName('');
-    setShowCategoryModal(true);
+    // Yeni kategori için direkt ürün ekleme modalını aç
+    setEditingProduct(null);
+    setProductForm({ name: '', code: '', brand: '', model: '', category: '', price: 0, description: '' });
+    setShowProductModal(true);
   };
 
   const handleSaveCategory = () => {
+    // Artık kullanılmıyor - ürün eklendiğinde kategori otomatik oluşuyor
     if (!newCategoryName.trim()) return;
     if (!categories[newCategoryName]) {
       setCategories({ ...categories, [newCategoryName]: [] });
@@ -166,11 +169,24 @@ export default function SuppliersPage() {
     setShowCategoryModal(false);
   };
 
-  const handleDeleteCategory = (category: string) => {
+  const handleDeleteCategory = async (category: string) => {
     if (!confirm(`"${category}" kategorisini ve içindeki tüm ürünleri silmek istediğinizden emin misiniz?`)) return;
-    const newCategories = { ...categories };
-    delete newCategories[category];
-    setCategories(newCategories);
+    
+    try {
+      // Bu kategorideki tüm ürünleri sil
+      const productsToDelete = categories[category] || [];
+      for (const product of productsToDelete) {
+        await fetch(`/api/products/${product.id}`, { method: 'DELETE' });
+      }
+      
+      // Kategorileri yeniden yükle
+      if (selectedSupplier) {
+        loadSupplierProducts(selectedSupplier);
+      }
+    } catch (error) {
+      console.error('Kategori silinirken hata:', error);
+      alert('Hata oluştu!');
+    }
   };
 
   // Ürün CRUD
@@ -187,7 +203,7 @@ export default function SuppliersPage() {
       code: product.code || '',
       brand: product.brand || '',
       model: product.model || '',
-      category: product.category,
+      category: product.category || '',
       price: product.price || 0,
       description: product.description || ''
     });
@@ -294,7 +310,7 @@ export default function SuppliersPage() {
                     value={supplierSearch}
                     onChange={(e) => setSupplierSearch(e.target.value)}
                     placeholder="🔍 Tedarikçi ara..."
-                    className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-gray-900"
+                    className="w-full px-4 py-2 pl-10 border-2 border-black bg-black text-white rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
                   />
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
                   {supplierSearch && (
@@ -367,11 +383,6 @@ export default function SuppliersPage() {
                   <p className="text-xl">Bir tedarikçi seçin</p>
                   <p className="text-sm mt-2">Kategoriler ve ürünler burada görünecek</p>
                 </div>
-              ) : Object.keys(categories).length === 0 ? (
-                <div className="text-center py-16 text-gray-500">
-                  <div className="text-6xl mb-4">📦</div>
-                  <p className="text-xl">Bu tedarikçiye ait ürün bulunmuyor</p>
-                </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-6">
@@ -381,7 +392,7 @@ export default function SuppliersPage() {
                         onClick={handleAddCategory}
                         className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold transition-colors"
                       >
-                        ➕ Kategori
+                        ➕ Ürün Ekle
                       </button>
                     </div>
                     
@@ -392,7 +403,7 @@ export default function SuppliersPage() {
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                         placeholder="🔍 Ürün ara (isim, kod, marka, model)..."
-                        className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-gray-900"
+                        className="w-full px-4 py-2 pl-10 border-2 border-black bg-black text-white rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
                       />
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
                       {productSearch && (
@@ -406,7 +417,14 @@ export default function SuppliersPage() {
                     </div>
                   </div>
                   
-                  {Object.keys(displayCategories).length === 0 ? (
+                  {Object.keys(categories).length === 0 ? (
+                    <div className="text-center py-16 text-gray-500">
+                      <div className="text-6xl mb-4">�</div>
+                      <p className="text-xl font-bold">Bu tedarikçiye henüz ürün eklenmemiş</p>
+                      <p className="text-sm mt-2">Yukarıdaki "➕ Ürün Ekle" butonuna tıklayarak ilk ürününüzü ekleyin</p>
+                      <p className="text-xs mt-2 text-gray-400">Ürün eklerken yeni bir kategori de oluşturabilirsiniz</p>
+                    </div>
+                  ) : Object.keys(displayCategories).length === 0 ? (
                     <div className="text-center py-16 text-gray-500">
                       <div className="text-6xl mb-4">🔍</div>
                       <p className="text-xl">Ürün bulunamadı</p>
@@ -482,7 +500,7 @@ export default function SuppliersPage() {
                                     {product.price > 0 && (
                                       <div className="text-right">
                                         <div className="font-bold text-green-600 text-lg">
-                                          {product.price.toFixed(2)} ₺
+                                          €{product.price.toFixed(2)}
                                         </div>
                                         <div className="text-xs text-gray-500">Birim Fiyat</div>
                                       </div>
@@ -532,7 +550,7 @@ export default function SuppliersPage() {
                   type="text"
                   value={supplierForm.name}
                   onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                 />
               </div>
               <div>
@@ -540,7 +558,7 @@ export default function SuppliersPage() {
                 <textarea
                   value={supplierForm.description}
                   onChange={(e) => setSupplierForm({ ...supplierForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   rows={3}
                 />
               </div>
@@ -551,7 +569,7 @@ export default function SuppliersPage() {
                     type="text"
                     value={supplierForm.contact_name}
                     onChange={(e) => setSupplierForm({ ...supplierForm, contact_name: e.target.value })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -560,7 +578,7 @@ export default function SuppliersPage() {
                     type="email"
                     value={supplierForm.email}
                     onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -570,7 +588,7 @@ export default function SuppliersPage() {
                   type="tel"
                   value={supplierForm.phone}
                   onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                 />
               </div>
               <div>
@@ -578,7 +596,7 @@ export default function SuppliersPage() {
                 <textarea
                   value={supplierForm.address}
                   onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   rows={2}
                 />
               </div>
@@ -612,7 +630,7 @@ export default function SuppliersPage() {
                 type="text"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500"
+                className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                 placeholder="Örn: Yeni Seri Ürünler"
               />
             </div>
@@ -648,7 +666,7 @@ export default function SuppliersPage() {
                   type="text"
                   value={productForm.name}
                   onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -658,17 +676,17 @@ export default function SuppliersPage() {
                     type="text"
                     value={productForm.code}
                     onChange={(e) => setProductForm({ ...productForm, code: e.target.value })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-1">Fiyat *</label>
+                  <label className="block text-sm font-bold mb-1">Fiyat (€) *</label>
                   <input
                     type="number"
                     step="0.01"
                     value={productForm.price}
                     onChange={(e) => setProductForm({ ...productForm, price: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -679,7 +697,7 @@ export default function SuppliersPage() {
                     type="text"
                     value={productForm.brand}
                     onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -688,29 +706,37 @@ export default function SuppliersPage() {
                     type="text"
                     value={productForm.model}
                     onChange={(e) => setProductForm({ ...productForm, model: e.target.value })}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Kategori *</label>
-                <select
-                  value={productForm.category}
-                  onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
-                >
-                  <option value="">Kategori Seçin</option>
-                  {Object.keys(categories).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="categories"
+                    value={productForm.category}
+                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                    placeholder="Kategori seçin veya yeni kategori yazın"
+                    className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
+                  />
+                  <datalist id="categories">
+                    {Object.keys(categories).map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Mevcut kategorilerden birini seçin veya yeni bir kategori adı yazın
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Açıklama</label>
                 <textarea
                   value={productForm.description}
                   onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-900"
+                  className="w-full px-3 py-2 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500"
                   rows={3}
                 />
               </div>

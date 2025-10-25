@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const db = getDatabase();
     
     // Güncellenebilir alanları kontrol et
-    const allowedFields = ['name', 'code', 'brand', 'model', 'category', 'price', 'description', 'specifications', 'stock_quantity', 'unit'];
+    const allowedFields = ['name', 'code', 'brand', 'model', 'category', 'price', 'description', 'specifications', 'stock_quantity', 'unit', 'supplier_id'];
     const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
     
     if (updateFields.length === 0) {
