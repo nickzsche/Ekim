@@ -68,7 +68,8 @@ export default function CustomersPage() {
         if (!res.ok) throw new Error('Müşteriler alınamadı');
         const data = await res.json();
         setCustomers(data);
-      } catch (e) {
+      } catch (error) {
+        console.error('Error fetching customers:', error);
         // Hata durumunda eski dummy veriyi kullan
         setCustomers([
           {id:1, name:'Mega Plaza AVM', company:'Mega Plaza', phone:'0216 987 65 43', email:'teknik@megaplaza.com', address:'İstanbul', taxNumber:'1234567890', taxOffice:'Kadıköy', contact:'Ahmet Yılmaz', balance: 12000},

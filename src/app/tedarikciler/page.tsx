@@ -419,9 +419,9 @@ export default function SuppliersPage() {
                   
                   {Object.keys(categories).length === 0 ? (
                     <div className="text-center py-16 text-gray-500">
-                      <div className="text-6xl mb-4">�</div>
+                      <div className="text-6xl mb-4">📦</div>
                       <p className="text-xl font-bold">Bu tedarikçiye henüz ürün eklenmemiş</p>
-                      <p className="text-sm mt-2">Yukarıdaki "➕ Ürün Ekle" butonuna tıklayarak ilk ürününüzü ekleyin</p>
+                      <p className="text-sm mt-2">Yukarıdaki &quot;➕ Ürün Ekle&quot; butonuna tıklayarak ilk ürününüzü ekleyin</p>
                       <p className="text-xs mt-2 text-gray-400">Ürün eklerken yeni bir kategori de oluşturabilirsiniz</p>
                     </div>
                   ) : Object.keys(displayCategories).length === 0 ? (

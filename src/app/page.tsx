@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Product, Quote, QuoteItem, Customer } from '@/lib/database';
@@ -51,7 +50,6 @@ export default function Home() {
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [isGrouping, setIsGrouping] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [viewingGroup, setViewingGroup] = useState<CartItem | null>(null);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -72,7 +70,6 @@ export default function Home() {
     deliveryTime: ''
   });
   const [loading, setLoading] = useState(true);
-  const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
   const [viewingGroupId, setViewingGroupId] = useState<number | null>(null);
   
   // Tavan hesaplama için state'ler
@@ -99,7 +96,14 @@ export default function Home() {
   const [doorPrice, setDoorPrice] = useState<number>(0);
   
   // Tedarikçi bazlı ürün seçimi için state'ler
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  interface Supplier {
+    id: number;
+    name: string;
+    contact_person?: string;
+    email?: string;
+    phone?: string;
+  }
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [supplierCategories, setSupplierCategories] = useState<string[]>([]);
   const [supplierSelectedCategory, setSupplierSelectedCategory] = useState('');
@@ -303,11 +307,11 @@ export default function Home() {
     }
   };
 
-  // Logout function
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('ekimAuth');
-  };
+  // Logout function (reserved for future use)
+  // const handleLogout = () => {
+  //   setIsAuthenticated(false);
+  //   localStorage.removeItem('ekimAuth');
+  // };
 
   // Cart management functions
   const addToCart = (product: Product) => {
@@ -720,7 +724,7 @@ export default function Home() {
   const updateUnitPrice = (productId: number, unitPrice: number) => {
     setCart(cart.map(item => {
       if (item.product.id === productId) {
-        let newSalesPrice = item.manualSalesPrice
+        const newSalesPrice = item.manualSalesPrice
           ? item.salesPrice
           : calculateSalesPrice(unitPrice, item.discount || 0, item.margin || 0);
         return { ...item, unitPrice, salesPrice: newSalesPrice };
@@ -732,7 +736,7 @@ export default function Home() {
   const updateDiscount = (productId: number, discount: number) => {
     setCart(cart.map(item => {
       if (item.product.id === productId) {
-        let newSalesPrice = item.manualSalesPrice
+        const newSalesPrice = item.manualSalesPrice
           ? item.salesPrice
           : calculateSalesPrice(item.unitPrice, discount, item.margin || 0);
         return { ...item, discount, salesPrice: newSalesPrice };
@@ -744,7 +748,7 @@ export default function Home() {
   const updateMargin = (productId: number, margin: number) => {
     setCart(cart.map(item => {
       if (item.product.id === productId) {
-        let newSalesPrice = item.manualSalesPrice
+        const newSalesPrice = item.manualSalesPrice
           ? item.salesPrice
           : calculateSalesPrice(item.unitPrice, item.discount || 0, margin);
         return { ...item, margin, salesPrice: newSalesPrice };
@@ -762,40 +766,37 @@ export default function Home() {
     }));
   };
 
-  // Cart item update functions for grouped items
-  const updateGroupedItem = (groupId: number, updates: Partial<CartItem>) => {
-    setCart(cart.map(item => {
-      if (item.product.id === groupId && item.isGrouped) {
-        // Update the group header (excluding product name changes)
-        const { product, ...otherUpdates } = updates;
-        const updatedItem = { ...item, ...otherUpdates };
-        
-        // If we're updating unitPrice, salesPrice, discount, or margin, recalculate
-        if (updates.unitPrice !== undefined || updates.discount !== undefined || updates.margin !== undefined) {
-          const newUnitPrice = updates.unitPrice !== undefined ? updates.unitPrice : (item.unitPrice || 0);
-          const newDiscount = updates.discount !== undefined ? updates.discount : (item.discount || 0);
-          const newMargin = updates.margin !== undefined ? updates.margin : (item.margin || 0);
-          
-          // Recalculate sales price
-          const discounted = newUnitPrice * (1 - (newDiscount || 0) / 100);
-          const withMargin = discounted * (1 + (newMargin || 0) / 100);
-          const newSalesPrice = parseFloat(withMargin.toFixed(2));
-          
-          updatedItem.unitPrice = newUnitPrice;
-          updatedItem.salesPrice = newSalesPrice;
-          updatedItem.discount = newDiscount;
-          updatedItem.margin = newMargin;
-        }
-        
-        return updatedItem;
-      }
-      return item;
-    }));
-  };
+  // Cart item update functions for grouped items (reserved for future use)
+  // const updateGroupedItem = (groupId: number, updates: Partial<CartItem>) => {
+  //   setCart(cart.map(item => {
+  //     if (item.product.id === groupId && item.isGrouped) {
+  //       const { product, ...otherUpdates } = updates;
+  //       const updatedItem = { ...item, ...otherUpdates };
+  //       
+  //       if (updates.unitPrice !== undefined || updates.discount !== undefined || updates.margin !== undefined) {
+  //         const newUnitPrice = updates.unitPrice !== undefined ? updates.unitPrice : (item.unitPrice || 0);
+  //         const newDiscount = updates.discount !== undefined ? updates.discount : (item.discount || 0);
+  //         const newMargin = updates.margin !== undefined ? updates.margin : (item.margin || 0);
+  //         
+  //         const discounted = newUnitPrice * (1 - (newDiscount || 0) / 100);
+  //         const withMargin = discounted * (1 + (newMargin || 0) / 100);
+  //         const newSalesPrice = parseFloat(withMargin.toFixed(2));
+  //         
+  //         updatedItem.unitPrice = newUnitPrice;
+  //         updatedItem.salesPrice = newSalesPrice;
+  //         updatedItem.discount = newDiscount;
+  //         updatedItem.margin = newMargin;
+  //       }
+  //       
+  //       return updatedItem;
+  //     }
+  //     return item;
+  //   }));
+  // };
 
-  const removeGroupedItem = (groupId: number) => {
-    setCart(cart.filter(item => item.product.id !== groupId));
-  };
+  // const removeGroupedItem = (groupId: number) => {
+  //   setCart(cart.filter(item => item.product.id !== groupId));
+  // };
 
   // Helper functions
   const calculateSalesPrice = (unitPrice: number, discount: number, margin: number) => {
@@ -829,71 +830,59 @@ export default function Home() {
     }
   };
 
-  const loadQuoteForEditing = async (quoteData: any) => {
-    try {
-      setEditingQuoteId(quoteData.id);
-      
-      setCustomerInfo({
-        name: quoteData.customer_name || '',
-        email: quoteData.customer_email || '',
-        phone: quoteData.customer_phone || '',
-        company: quoteData.company || '',
-        address: ''
-      });
-      
-      const notes = quoteData.notes || '';
-      const projectDesign = notes.match(/Proje Tasarım: ([^\n]*)/)?.[1] || '';
-      const projectDescription = notes.match(/Proje Açıklama: ([^\n]*)/)?.[1] || '';
-      const startDate = notes.match(/Başlangıç: ([^\n]*)/)?.[1] || '';
-      const endDate = notes.match(/Bitiş: ([^\n]*)/)?.[1] || '';
-      const validityPeriod = notes.match(/Geçerlilik: ([^\n]*)/)?.[1] || '30';
-      const deliveryTime = notes.match(/Teslim: ([^\n]*)/)?.[1] || '';
-      
-      setProjectDetails({
-        projectDesign,
-        projectDescription
-      });
-      
-      setSchedule({
-        startDate,
-        endDate
-      });
-      
-      setConditions({
-        validityPeriod: validityPeriod.replace(' gün', ''),
-        deliveryTime
-      });
-      
-      const response = await fetch(`/api/quotes/${quoteData.id}`);
-      if (response.ok) {
-        const details = await response.json();
-        const cartItems: CartItem[] = details.items?.map((item: any) => ({
-          product: {
-            id: item.product_id,
-            name: item.product_name || 'Unknown Product',
-            brand: item.brand || '',
-            model: item.model || '',
-            code: item.code || '',
-            category: '',
-            price: item.unit_price,
-            description: '',
-            specifications: '',
-            stock_quantity: 0,
-            unit: 'adet'
-          },
-          quantity: item.quantity,
-          unitPrice: item.unit_price
-        })) || [];
-        
-        setCart(cartItems);
-      }
-      
-      setActiveStep(1);
-    } catch (error) {
-      console.error('Quote loading error:', error);
-      alert('Teklif yüklenirken hata oluştu!');
-    }
-  };
+  // Load quote for editing (reserved for future use)
+  // const loadQuoteForEditing = async (quoteData: Quote) => {
+  //   try {
+  //     setCustomerInfo({
+  //       name: quoteData.customer_name || '',
+  //       email: quoteData.customer_email || '',
+  //       phone: quoteData.customer_phone || '',
+  //       company: quoteData.company || '',
+  //       address: ''
+  //     });
+  //     
+  //     const notes = quoteData.notes || '';
+  //     const projectDesign = notes.match(/Proje Tasarım: ([^\n]*)/)?.[1] || '';
+  //     const projectDescription = notes.match(/Proje Açıklama: ([^\n]*)/)?.[1] || '';
+  //     const startDate = notes.match(/Başlangıç: ([^\n]*)/)?.[1] || '';
+  //     const endDate = notes.match(/Bitiş: ([^\n]*)/)?.[1] || '';
+  //     const validityPeriod = notes.match(/Geçerlilik: ([^\n]*)/)?.[1] || '30';
+  //     const deliveryTime = notes.match(/Teslim: ([^\n]*)/)?.[1] || '';
+  //     
+  //     setProjectDetails({ projectDesign, projectDescription });
+  //     setSchedule({ startDate, endDate });
+  //     setConditions({ validityPeriod: validityPeriod.replace(' gün', ''), deliveryTime });
+  //     
+  //     const response = await fetch(`/api/quotes/${quoteData.id}`);
+  //     if (response.ok) {
+  //       const details = await response.json();
+  //       const cartItems: CartItem[] = details.items?.map((item: QuoteItem) => ({
+  //         product: {
+  //           id: item.product_id,
+  //           name: item.product_name || 'Unknown Product',
+  //           brand: item.brand || '',
+  //           model: item.model || '',
+  //           code: item.code || '',
+  //           category: '',
+  //           price: item.unit_price,
+  //           description: '',
+  //           specifications: '',
+  //           stock_quantity: 0,
+  //           unit: 'adet'
+  //         },
+  //         quantity: item.quantity,
+  //         unitPrice: item.unit_price
+  //       })) || [];
+  //       
+  //       setCart(cartItems);
+  //     }
+  //     
+  //     setActiveStep(1);
+  //   } catch (error) {
+  //     console.error('Quote loading error:', error);
+  //     alert('Teklif yüklenirken hata oluştu!');
+  //   }
+  // };
 
   const createQuote = async () => {
     if (!customerInfo.name.trim()) {
@@ -1037,7 +1026,7 @@ Teslim: ${conditions.deliveryTime}`
     
     setTotal(calculatedSubtotal + calculatedKdv);
   }, [products, cart]);
-  const calculatedTotal = subtotal + kdv;
+  // const calculatedTotal = subtotal + kdv; // Unused variable
 
   const totalCost = cart.reduce((sum, item) => {
     const discount = item.discount ?? 0;
@@ -2314,7 +2303,7 @@ Teslim: ${conditions.deliveryTime}`
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-xs text-blue-800">
                 💡 <strong>Not:</strong> Seçilen ürünler tek bir grup adı altında birleştirilecek. 
-                Grup içindeki ürünler PDF'de gizli olacak, sadece grup adı ve toplam fiyat görünecek.
+                Grup içindeki ürünler PDF&apos;de gizli olacak, sadece grup adı ve toplam fiyat görünecek.
               </p>
             </div>
             <div className="flex justify-end space-x-3">

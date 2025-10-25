@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, Product } from '@/lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function GET() {
   try {
@@ -18,7 +18,19 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const product: any = await request.json();
+    const product = await request.json() as {
+      name: string;
+      code?: string;
+      brand?: string;
+      model?: string;
+      category: string;
+      price: number;
+      description?: string;
+      specifications?: string;
+      stock_quantity?: number;
+      unit: string;
+      supplier_id?: number;
+    };
     const db = getDatabase();
     
     const stmt = db.prepare(`

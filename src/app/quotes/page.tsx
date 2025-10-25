@@ -1,9 +1,22 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
+
+interface QuoteItem {
+  id?: number;
+  quote_id: number;
+  product_id: number;
+  product_name?: string;
+  brand?: string;
+  model?: string;
+  code?: string;
+  quantity: number;
+  unit_price: number;
+}
 
 interface Quote {
   id: number;
@@ -16,6 +29,7 @@ interface Quote {
   notes?: string;
   created_at: string;
   item_count: number;
+  items?: QuoteItem[];
 }
 
 const statusConfig = {
@@ -129,7 +143,7 @@ export default function QuotesPage() {
           validityPeriod: validityPeriod.replace(' gün', ''),
           deliveryTime: deliveryTime
         },
-        items: quoteDetails.items?.map((item: any) => ({
+        items: quoteDetails.items?.map((item: QuoteItem) => ({
           product: {
             name: item.product_name || 'Unknown Product',
             brand: item.brand || '',
@@ -138,7 +152,7 @@ export default function QuotesPage() {
           },
           quantity: item.quantity,
           unitPrice: item.unit_price,
-          total: item.total_price
+          total: item.unit_price * item.quantity
         })) || [],
         subtotal: subtotal,
         kdv: kdv,
@@ -263,13 +277,13 @@ export default function QuotesPage() {
                   <span className="text-indigo-600 font-bold text-lg">Toplam: {quotes.length} Teklif</span>
                 </div>
               </div>
-              <a
+              <Link
                 href="/"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 btn-hover shadow-lg flex items-center space-x-3"
               >
                 <span>✨</span>
                 <span>Yeni Teklif</span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -346,7 +360,7 @@ export default function QuotesPage() {
             </div>
             <h3 className="text-3xl font-black text-gray-900 mb-4">Henüz teklif yok</h3>
             <p className="text-gray-600 mb-8 text-lg">İlk teklifinizi oluşturmak için yeni teklif butonuna tıklayın</p>
-            <a
+            <Link
               href="/"
               className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 btn-hover shadow-lg"
             >
@@ -354,7 +368,7 @@ export default function QuotesPage() {
                 <span>✨</span>
                 <span>Yeni Teklif Oluştur</span>
               </span>
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -571,7 +585,7 @@ export default function QuotesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {selectedQuote.items.map((item: any, index: number) => (
+                        {selectedQuote.items.map((item: QuoteItem, index: number) => (
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="px-4 py-3">
                               <div className="font-bold text-gray-900">{item.product_name || 'Unknown Product'}</div>
@@ -583,7 +597,7 @@ export default function QuotesPage() {
                               €{item.unit_price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                             </td>
                             <td className="px-4 py-3 text-right font-bold text-lg text-green-600">
-                              €{item.total_price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                              €{(item.unit_price * item.quantity).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
                         ))}
