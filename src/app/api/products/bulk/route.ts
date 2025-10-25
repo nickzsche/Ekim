@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase, Product } from '@/lib/database';
 
+interface BulkResult {
+  success: boolean;
+  id?: number | bigint;
+  name: string;
+  error?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const products: Product[] = await request.json();
@@ -21,7 +28,7 @@ export async function POST(request: NextRequest) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
-      const results = [];
+      const results: BulkResult[] = [];
       for (const product of products) {
         try {
           const result = stmt.run(
@@ -48,8 +55,8 @@ export async function POST(request: NextRequest) {
     
     const results = transaction(products);
     
-    const successCount = results.filter(r => r.success).length;
-    const errorCount = results.filter(r => !r.success).length;
+    const successCount = results.filter((r: BulkResult) => r.success).length;
+    const errorCount = results.filter((r: BulkResult) => !r.success).length;
     
     return NextResponse.json({
       message: `${successCount} ürün başarıyla eklendi, ${errorCount} üründe hata oluştu`,
