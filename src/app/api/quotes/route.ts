@@ -26,15 +26,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { quote, items }: { quote: Quote; items: QuoteItem[] } = await request.json();
+    console.log('Received quote data:', { quote, itemsCount: items?.length });
+    
     const db = getDatabase();
+    console.log('Database connected');
     
     // Transaction başlat
     const transaction = db.transaction(() => {
+      console.log('Transaction started');
+      
       // Teklifi ekle
       const quoteStmt = db.prepare(`
         INSERT INTO quotes (customer_name, customer_email, customer_phone, company, total_amount, status, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
+      
+      console.log('Inserting quote:', {
+        customer_name: quote.customer_name,
+        customer_email: quote.customer_email || null,
+        customer_phone: quote.customer_phone || null,
+        company: quote.company || null,
+        total_amount: quote.total_amount || 0,
+        status: quote.status || 'draft',
+        notes: quote.notes || null
+      });
       
       const result = quoteStmt.run(
         quote.customer_name,
@@ -47,9 +62,11 @@ export async function POST(request: NextRequest) {
       );
       
       const quoteId = result.lastInsertRowid;
+      console.log('Quote inserted with ID:', quoteId);
       
       // Teklif kalemlerini ekle
       if (items && items.length > 0) {
+        console.log('Inserting', items.length, 'quote items');
         const itemStmt = db.prepare(`
           INSERT INTO quote_items (quote_id, product_id, quantity, unit_price, total_price)
           VALUES (?, ?, ?, ?, ?)
@@ -60,6 +77,14 @@ export async function POST(request: NextRequest) {
           const itemTotal = item.quantity * item.unit_price;
           totalAmount += itemTotal;
           
+          console.log('Inserting item:', {
+            quote_id: quoteId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: itemTotal
+          });
+          
           itemStmt.run(
             quoteId,
             item.product_id,
@@ -69,6 +94,7 @@ export async function POST(request: NextRequest) {
           );
         }
         
+        console.log('Updating total amount to:', totalAmount);
         // Toplam tutarı güncelle
         const updateStmt = db.prepare('UPDATE quotes SET total_amount = ? WHERE id = ?');
         updateStmt.run(totalAmount, quoteId);
@@ -77,7 +103,9 @@ export async function POST(request: NextRequest) {
       return quoteId;
     });
     
+    console.log('Executing transaction...');
     const quoteId = transaction();
+    console.log('Transaction completed, quote ID:', quoteId);
     
     return NextResponse.json({ 
       success: true, 
@@ -86,8 +114,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Teklif oluştururken hata:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Teklif oluşturulurken hata oluştu' },
+      { error: 'Teklif oluşturulurken hata oluştu', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

@@ -256,13 +256,14 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$database$2e$ts
 ;
 async function GET(request, { params }) {
     try {
+        const { id } = await params;
         const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$database$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["getDatabase"])();
         // Tedarikçinin tüm ürünlerini getir
         const products = db.prepare(`
       SELECT * FROM products 
       WHERE supplier_id = ? 
       ORDER BY category, name
-    `).all(params.id);
+    `).all(id);
         // Kategorilere göre grupla
         const categorizedProducts = {};
         products.forEach((product)=>{
@@ -273,7 +274,7 @@ async function GET(request, { params }) {
             categorizedProducts[category].push(product);
         });
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-            supplierId: params.id,
+            supplierId: id,
             categories: categorizedProducts
         });
     } catch (error) {

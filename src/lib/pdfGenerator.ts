@@ -76,6 +76,9 @@ export interface QuotePDFData {
 
 export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   try {
+    console.log('generateQuotePDF called with data:', data);
+    console.log('Customer info received:', data.customerInfo);
+    
     const jsPDF = (await import('jspdf')).default;
     console.log('PDF oluşturma başladı...');
     
@@ -100,6 +103,17 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   tempDiv.style.overflow = 'hidden';
   
   // Create the HTML content for the PDF
+  
+  // Müşteri bilgilerini hazırla
+  const customerName = data.customerInfo.name || "Müşteri Adı Belirtilmemiş";
+  const customerCompany = data.customerInfo.company || "";
+  const customerPhone = data.customerInfo.phone || "";
+  const customerEmail = data.customerInfo.email || "";
+  
+  console.log("PDF'e yazılacak müşteri adı:", customerName);
+  console.log("Şirket:", customerCompany);
+  console.log("Telefon:", customerPhone);
+  
   tempDiv.innerHTML = `
   <div style="padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #2c3e50; line-height: 1.4; font-size: 11px; background: white;">
       <!-- Header -->
@@ -119,12 +133,12 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
           </div>
         </td>
         <td style="width: 50%; vertical-align: top; text-align: right;">
-          <div style="font-size: 11px; color: #1e40af; font-weight: 700; margin-bottom: 10px;">MÜŞTERİ BİLGİLERİ</div>
-          <div style="background: white; padding: 12px; border-radius: 6px; display: inline-block; text-align: left; min-width: 200px;">
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">${data.customerInfo.name}</div>
-            ${data.customerInfo.company ? `<div style="font-size: 10px; color: #64748b;">${data.customerInfo.company}</div>` : ''}
-            ${data.customerInfo.email ? `<div style="font-size: 9px; margin-top: 4px;">📧 ${data.customerInfo.email}</div>` : ''}
-            ${data.customerInfo.phone ? `<div style="font-size: 9px;">📱 ${data.customerInfo.phone}</div>` : ''}
+          <div style="font-size: 14px; color: #1e40af; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">MÜŞTERİ BİLGİLERİ</div>
+          <div style="background: #ffffff; padding: 15px; border-radius: 8px; display: inline-block; text-align: left; min-width: 220px; border: 2px solid #1e40af; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 10px; line-height: 1.5; border-bottom: 2px solid #1e40af; padding: 8px; text-transform: uppercase; background: #f8fafc; border-radius: 4px;">${customerName}</div>
+            ${customerCompany ? `<div style="font-size: 14px; color: #1e293b; font-weight: 700; margin-bottom: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border-left: 3px solid #3b82f6;">ŞİRKET: ${customerCompany}</div>` : ""}
+            ${customerPhone ? `<div style="font-size: 13px; color: #1e293b; font-weight: 700; margin-top: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">TEL: ${customerPhone}</div>` : ""}
+            ${customerEmail ? `<div style="font-size: 12px; margin-top: 6px; color: #1e293b; font-weight: 600; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">E-POSTA: ${customerEmail}</div>` : ""}
           </div>
           <div style="margin-top: 15px; font-size: 10px;">
             <div><strong>Teklif No:</strong> <span style="color: #1e40af; font-weight: 700;">#${data.quoteId}</span></div>

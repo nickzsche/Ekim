@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
+import { generateQuoteHTML, QuoteHTMLData } from '@/lib/htmlQuoteGenerator';
 
 interface QuoteItem {
   id?: number;
@@ -100,8 +101,33 @@ export default function QuotesPage() {
     });
   };
 
+  const updateQuoteStatus = async (quoteId: number, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Teklifleri yeniden yükle
+        fetchQuotes();
+      } else {
+        alert('Durum güncellenirken hata oluştu!');
+      }
+    } catch (error) {
+      console.error('Durum güncelleme hatası:', error);
+      alert('Durum güncellenirken hata oluştu!');
+    }
+  };
+
   const generatePDFForQuote = async (quote: Quote) => {
     try {
+      console.log('Starting PDF generation for quote:', quote.id);
+      console.log('Quote data:', quote);
+      
       // Fetch quote details with items
       const response = await fetch(`/api/quotes/${quote.id}`);
       if (!response.ok) {
@@ -109,9 +135,10 @@ export default function QuotesPage() {
       }
       
       const quoteDetails = await response.json();
+      console.log('Quote details from API:', quoteDetails);
       
       // Parse notes to extract project details
-      const notes = quote.notes || '';
+      const notes = quoteDetails.notes || '';
       const projectDesign = notes.match(/Proje Tasarım: ([^\n]*)/)?.[1] || '';
       const projectDescription = notes.match(/Proje Açıklama: ([^\n]*)/)?.[1] || '';
       const startDate = notes.match(/Başlangıç: ([^\n]*)/)?.[1] || '';
@@ -119,16 +146,16 @@ export default function QuotesPage() {
       const validityPeriod = notes.match(/Geçerlilik: ([^\n]*)/)?.[1] || '30 gün';
       const deliveryTime = notes.match(/Teslim: ([^\n]*)/)?.[1] || '';
 
-      const subtotal = quote.total_amount / 1.20; // Remove VAT to get subtotal
-      const kdv = quote.total_amount - subtotal;
+      const subtotal = quoteDetails.total_amount / 1.20; // Remove VAT to get subtotal
+      const kdv = quoteDetails.total_amount - subtotal;
 
       const pdfData: QuotePDFData = {
-        quoteId: quote.id,
+        quoteId: quoteDetails.id,
         customerInfo: {
-          name: quote.customer_name,
-          company: quote.company,
-          email: quote.customer_email,
-          phone: quote.customer_phone,
+          name: (quoteDetails.customer_name || 'Müşteri adı yok').trim(),
+          company: (quoteDetails.company || '').trim(),
+          email: (quoteDetails.customer_email || '').trim(),
+          phone: (quoteDetails.customer_phone || '').trim(),
           address: '' // Address not stored in current quotes
         },
         projectDetails: {
@@ -156,14 +183,86 @@ export default function QuotesPage() {
         })) || [],
         subtotal: subtotal,
         kdv: kdv,
-        total: quote.total_amount,
-        createdAt: quote.created_at
+        total: quoteDetails.total_amount,
+        createdAt: quoteDetails.created_at
       };
+
+      console.log('PDF Data being sent:', pdfData);
+      console.log('Customer Info:', pdfData.customerInfo);
 
       await generateQuotePDF(pdfData);
     } catch (error) {
       console.error('PDF generation error:', error);
       alert('PDF oluşturulurken hata oluştu!');
+    }
+  };
+
+  const generateHTMLForQuote = async (quote: Quote) => {
+    try {
+      console.log('Starting HTML generation for quote:', quote.id);
+      
+      // Fetch quote details with items
+      const response = await fetch(`/api/quotes/${quote.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch quote details');
+      }
+      
+      const quoteDetails = await response.json();
+      
+      // Parse notes to extract project details
+      const notes = quoteDetails.notes || '';
+      const projectDesign = notes.match(/Proje Tasarım: ([^\n]*)/)?.[1] || '';
+      const projectDescription = notes.match(/Proje Açıklama: ([^\n]*)/)?.[1] || '';
+      const startDate = notes.match(/Başlangıç: ([^\n]*)/)?.[1] || '';
+      const endDate = notes.match(/Bitiş: ([^\n]*)/)?.[1] || '';
+      const validityPeriod = notes.match(/Geçerlilik: ([^\n]*)/)?.[1] || '30 gün';
+      const deliveryTime = notes.match(/Teslim: ([^\n]*)/)?.[1] || '';
+
+      const subtotal = quoteDetails.total_amount / 1.20;
+      const kdv = quoteDetails.total_amount - subtotal;
+
+      const htmlData: QuoteHTMLData = {
+        quoteId: quoteDetails.id,
+        customerInfo: {
+          name: (quoteDetails.customer_name || 'Müşteri adı yok').trim(),
+          company: (quoteDetails.company || '').trim(),
+          email: (quoteDetails.customer_email || '').trim(),
+          phone: (quoteDetails.customer_phone || '').trim(),
+          address: ''
+        },
+        projectDetails: {
+          projectDesign: projectDesign,
+          projectDescription: projectDescription
+        },
+        schedule: {
+          startDate: startDate,
+          endDate: endDate
+        },
+        conditions: {
+          validityPeriod: validityPeriod.replace(' gün', ''),
+          deliveryTime: deliveryTime
+        },
+        items: quoteDetails.items?.map((item: QuoteItem) => ({
+          product: {
+            name: item.product_name || 'Unknown Product',
+            brand: item.brand || '',
+            model: item.model || '',
+            code: item.code || ''
+          },
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          total: item.unit_price * item.quantity
+        })) || [],
+        subtotal: subtotal,
+        kdv: kdv,
+        total: quoteDetails.total_amount,
+        createdAt: quoteDetails.created_at
+      };
+
+      generateQuoteHTML(htmlData);
+    } catch (error) {
+      console.error('HTML generation error:', error);
+      alert('HTML oluşturulurken hata oluştu!');
     }
   };
 
@@ -401,10 +500,19 @@ export default function QuotesPage() {
                         </div>
                         <p className="text-sm text-gray-500 font-medium">{formatDate(quote.created_at)}</p>
                       </div>
-                      <span className={`inline-flex items-center px-4 py-2 rounded-full text-xs font-bold shadow-sm ${status.color}`}>
-                        <span className="mr-2 text-sm">{status.icon}</span>
-                        {status.label}
-                      </span>
+                      <div className="relative group">
+                        <select
+                          value={quote.status}
+                          onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
+                          className={`inline-flex items-center px-4 py-2 rounded-full text-xs font-bold shadow-sm cursor-pointer transition-all duration-200 border-2 border-transparent hover:border-gray-300 ${status.color}`}
+                        >
+                          <option value="draft">📝 Taslak</option>
+                          <option value="sent">📤 Gönderildi</option>
+                          <option value="approved">✅ Onaylandı</option>
+                          <option value="rejected">❌ Reddedildi</option>
+                          <option value="expired">⏰ Süresi Doldu</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* Customer Info */}
@@ -479,6 +587,13 @@ export default function QuotesPage() {
                       >
                         <span>✏️</span>
                         <span>Düzenle</span>
+                      </button>
+                      <button 
+                        onClick={() => generateHTMLForQuote(quote)}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 btn-hover shadow-lg flex items-center justify-center space-x-2"
+                      >
+                        <span>🌐</span>
+                        <span>HTML</span>
                       </button>
                       <button 
                         onClick={() => generatePDFForQuote(quote)}

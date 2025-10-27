@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/AOM/Desktop/Baran%20Proje/EkimSogutma/teklif-formu/src/app/page.tsx"],"sourcesContent":["\"use client\";\r\n\r\nimport { useState, useEffect } from 'react';\r\nimport Image from 'next/image';\r\nimport Header from '@/components/Header';\r\nimport Footer from '@/components/Footer';\r\nimport { Product, Quote, QuoteItem, Customer } from '@/lib/database';\r\nimport { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';\r\n\r\n// Types and Interfaces\r\ninterface CartItem {\r\n  product: Product;\r\n  quantity: number;\r\n  unitPrice: number;\r\n  discount?: number;\r\n  margin?: number;\r\n  customName?: string;\r\n  salesPrice?: number;\r\n  manualSalesPrice?: boolean;\r\n  isGrouped?: boolean;\r\n  groupName?: string;\r\n  groupItems?: CartItem[];\r\n}"],"names":[],"mappings":";AAAA","debugId":null}}]
-}

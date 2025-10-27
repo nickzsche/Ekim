@@ -17,6 +17,8 @@ export async function GET(
       WHERE q.id = ?
     `).get(quoteId);
     
+    console.log('Quote fetched from DB:', quote);
+    
     if (!quote) {
       return NextResponse.json(
         { error: 'Teklif bulunamadı' },
@@ -32,6 +34,8 @@ export async function GET(
       WHERE qi.quote_id = ?
     `).all(quoteId);
     
+    console.log('Quote items fetched:', items.length);
+    
     return NextResponse.json({
       ...quote,
       items
@@ -40,6 +44,51 @@ export async function GET(
     console.error('Teklif detayları getirilirken hata:', error);
     return NextResponse.json(
       { error: 'Teklif detayları getirilirken hata oluştu' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const quoteId = parseInt(id);
+    const body = await request.json();
+    const { status } = body;
+
+    if (!status) {
+      return NextResponse.json(
+        { error: 'Status alanı gerekli' },
+        { status: 400 }
+      );
+    }
+
+    const db = getDatabase();
+    
+    // Check if quote exists
+    const quote = db.prepare('SELECT id FROM quotes WHERE id = ?').get(quoteId);
+    
+    if (!quote) {
+      return NextResponse.json(
+        { error: 'Teklif bulunamadı' },
+        { status: 404 }
+      );
+    }
+
+    // Update quote status
+    db.prepare('UPDATE quotes SET status = ? WHERE id = ?').run(status, quoteId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Teklif durumu güncellendi'
+    });
+  } catch (error) {
+    console.error('Teklif güncellenirken hata:', error);
+    return NextResponse.json(
+      { error: 'Teklif güncellenirken hata oluştu' },
       { status: 500 }
     );
   }

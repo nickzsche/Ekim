@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Product, Quote, QuoteItem, Customer } from '@/lib/database';
 import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
+import { generateQuoteHTML, QuoteHTMLData } from '@/lib/htmlQuoteGenerator';
 
 // Types and Interfaces
 interface CartItem {
@@ -34,6 +35,7 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   // States for navigation and UI
   const [activeStep, setActiveStep] = useState(1);
@@ -298,7 +300,7 @@ export default function Home() {
   // Login function
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginForm.username === 'Bozkurt' && loginForm.password === 'OtukendenKuzeye34!') {
+    if (loginForm.username === 'Bozkurt' && loginForm.password === '53kuzeyli53') {
       setIsAuthenticated(true);
       setLoginError('');
       localStorage.setItem('ekimAuth', 'authenticated');
@@ -811,8 +813,9 @@ export default function Home() {
     if (customerId) {
       const customer = customers.find(c => c.id?.toString() === customerId);
       if (customer) {
+        console.log('Müşteri seçildi:', customer);
         setCustomerInfo({
-          name: customer.name,
+          name: customer.name || '',
           email: customer.email || '',
           phone: customer.phone || '',
           company: customer.company || '',
@@ -885,6 +888,8 @@ export default function Home() {
   // };
 
   const createQuote = async () => {
+    console.log('createQuote başladı, customerInfo:', customerInfo);
+    
     if (!customerInfo.name.trim()) {
       alert('Müşteri adı zorunludur!');
       return;
@@ -901,10 +906,10 @@ export default function Home() {
       );
 
       const quote: Quote = {
-        customer_name: customerInfo.name,
-        customer_email: customerInfo.email || undefined,
-        customer_phone: customerInfo.phone || undefined,
-        company: customerInfo.company || undefined,
+        customer_name: customerInfo.name.trim(),
+        customer_email: customerInfo.email?.trim() || undefined,
+        customer_phone: customerInfo.phone?.trim() || undefined,
+        company: customerInfo.company?.trim() || undefined,
         total_amount: totalAmount,
         status: 'draft',
         notes: `Proje Tasarım: ${projectDetails.projectDesign}
@@ -915,8 +920,21 @@ Geçerlilik: ${conditions.validityPeriod} gün
 Teslim: ${conditions.deliveryTime}`
       };
 
+      console.log('Kaydedilecek quote:', quote);
+
       const items: QuoteItem[] = cart
-        .filter(item => !item.isGrouped) // Gruplanmış ürünleri veritabanına kaydetme
+        .filter(item => {
+          // Gruplanmış ürünleri veritabanına kaydetme
+          if (item.isGrouped) return false;
+          
+          // Panel hesaplama, bakır boru, kablo gibi manuel eklenen ürünleri filtreleme
+          // Bu ürünlerin ID'si Date.now() ile oluşturulmuştur ve veritabanında yoktur
+          const productId = item.product.id!;
+          // Date.now() çok büyük sayılar üretir (13 haneli), veritabanı ID'leri daha küçüktür
+          if (productId > 1000000000) return false;
+          
+          return true;
+        })
         .map(item => ({
           product_id: item.product.id!,
           quantity: item.quantity,
@@ -933,18 +951,20 @@ Teslim: ${conditions.deliveryTime}`
         body: JSON.stringify({ quote, items }),
       });
 
+      const result = await response.json();
+      console.log('API Response:', result);
+
       if (response.ok) {
-        const result = await response.json();
         const quoteId = result.quoteId;
 
         const pdfData: QuotePDFData = {
           quoteId: quoteId,
           customerInfo: {
-            name: customerInfo.name,
-            company: customerInfo.company,
-            email: customerInfo.email,
-            phone: customerInfo.phone,
-            address: customerInfo.address
+            name: customerInfo.name.trim(),
+            company: customerInfo.company?.trim() || '',
+            email: customerInfo.email?.trim() || '',
+            phone: customerInfo.phone?.trim() || '',
+            address: customerInfo.address?.trim() || ''
           },
           projectDetails: {
             projectDesign: projectDetails.projectDesign,
@@ -976,9 +996,14 @@ Teslim: ${conditions.deliveryTime}`
           createdAt: new Date().toISOString()
         };
 
-        await generateQuotePDF(pdfData);
+        console.log('Ana sayfada PDF için hazırlanan veri:', pdfData);
+        console.log('Müşteri bilgileri:', pdfData.customerInfo);
 
-        alert('Teklif başarıyla oluşturuldu ve PDF indirildi!');
+        // HTML oluştur (yeni pencerede göster)
+        const htmlData: QuoteHTMLData = { ...pdfData };
+        generateQuoteHTML(htmlData);
+
+        alert('Teklif başarıyla oluşturuldu! HTML sayfasında görüntüleniyor - oradan PDF olarak kaydedebilirsiniz.');
 
         setCart([]);
         setCustomerInfo({
@@ -1003,7 +1028,8 @@ Teslim: ${conditions.deliveryTime}`
         setSelectedCustomer('');
         setActiveStep(1);
       } else {
-        alert('Teklif oluşturulurken hata oluştu!');
+        console.error('API Error Response:', result);
+        alert(`Teklif oluşturulurken hata oluştu: ${result.error || 'Bilinmeyen hata'}`);
       }
     } catch (error) {
       console.error('Teklif oluşturma hatası:', error);
@@ -1079,14 +1105,27 @@ Teslim: ${conditions.deliveryTime}`
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Şifre
               </label>
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-400"
-                placeholder="Şifrenizi girin"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  className="w-full px-4 py-3 pr-12 border-2 border-black bg-black text-white rounded-lg focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-400"
+                  placeholder="Şifrenizi girin"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? (
+                    <span className="text-xl">👁️</span>
+                  ) : (
+                    <span className="text-xl">👁️‍🗨️</span>
+                  )}
+                </button>
+              </div>
             </div>
             
             {loginError && (
