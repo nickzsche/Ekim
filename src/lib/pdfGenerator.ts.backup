@@ -116,7 +116,7 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
           ` : ''}
           <div style="font-size: 10px; color: #64748b; margin-top: 8px;">Profesyonel Soğutma ve Klima Sistemleri</div>
           <div style="font-size: 9px; color: #334155; margin-top: 8px;">
-            <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
+            <div>📞 / +90 542 457 2553</div>
             <div>✉️ info@ekimsogutma.com</div>
             <div>🌐 www.ekimsogutma.com</div>
           </div>

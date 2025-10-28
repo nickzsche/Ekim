@@ -282,22 +282,38 @@ export default function QuotesPage() {
     }
   };
 
-  const editQuote = (quote: Quote) => {
-    // Redirect to main page with quote data for editing
-    const quoteData = {
-      id: quote.id,
-      customer_name: quote.customer_name,
-      customer_email: quote.customer_email,
-      customer_phone: quote.customer_phone,
-      company: quote.company,
-      total_amount: quote.total_amount,
-      status: quote.status,
-      notes: quote.notes
-    };
-    
-    // Store in sessionStorage to pass to main page
-    sessionStorage.setItem('editQuote', JSON.stringify(quoteData));
-    window.location.href = '/?edit=true';
+  const editQuote = async (quote: Quote) => {
+    try {
+      // Teklif detaylarını API'den al
+      const response = await fetch(`/api/quotes/${quote.id}`);
+      if (!response.ok) {
+        alert('Teklif detayları alınamadı!');
+        return;
+      }
+      
+      const quoteDetails = await response.json();
+      
+      // Redirect to main page with quote data for editing
+      const quoteData = {
+        id: quote.id,
+        customer_name: quote.customer_name,
+        customer_email: quote.customer_email,
+        customer_phone: quote.customer_phone,
+        company: quote.company,
+        total_amount: quote.total_amount,
+        status: quote.status,
+        notes: quote.notes,
+        items: quoteDetails.items || [],
+        conditions: quoteDetails.conditions || { validityPeriod: '30', deliveryTime: '' }
+      };
+      
+      // Store in sessionStorage to pass to main page
+      sessionStorage.setItem('editQuote', JSON.stringify(quoteData));
+      window.location.href = '/?edit=true';
+    } catch (error) {
+      console.error('Teklif düzenleme hatası:', error);
+      alert('Teklif detayları alınırken hata oluştu!');
+    }
   };
 
   const deleteQuote = async (quote: Quote) => {
@@ -590,10 +606,10 @@ export default function QuotesPage() {
                       </button>
                       <button 
                         onClick={() => generateHTMLForQuote(quote)}
-                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-4 rounded-xl text-base font-bold transition-all duration-300 btn-hover shadow-2xl flex items-center justify-center space-x-3 scale-110 animate-pulse"
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 btn-hover shadow-lg flex items-center justify-center space-x-2"
                       >
-                        <span className="text-2xl">�️</span>
-                        <span>PDF OLUŞTUR</span>
+                        <span>⬇️</span>
+                        <span>İndir</span>
                       </button>
                       <button 
                         onClick={() => deleteQuote(quote)}

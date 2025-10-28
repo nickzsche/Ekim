@@ -1,6 +1,7 @@
 'use client';
 import html2canvas from 'html2canvas';
 
+// Updated: 2025-10-28 - Excel format (simple black/white tables)
 // Helper function to load image as base64
 const loadImageAsBase64 = async (imagePath: string): Promise<string> => {
   try {
@@ -95,8 +96,9 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   tempDiv.style.width = '794px'; // A4 width in pixels at 96 DPI
   tempDiv.style.backgroundColor = 'white';
   tempDiv.style.fontFamily = 'Arial, sans-serif';
-  tempDiv.style.maxHeight = '1050px'; // Tek sayfa için yükseklik sınırı (A4: 1122px, biraz boşluk bırak)
-  tempDiv.style.overflow = 'hidden';
+  // Daha küçük fontlarla daha az sayfa tüketmek için temel font küçültüldü
+  tempDiv.style.maxHeight = 'none';
+  tempDiv.style.overflow = 'visible';
   
   // Create the HTML content for the PDF
   
@@ -111,144 +113,188 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
   console.log("Telefon:", customerPhone);
   
   tempDiv.innerHTML = `
-  <div style="padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #2c3e50; line-height: 1.4; font-size: 11px; background: white;">
-      <!-- Header -->
-  <div style="background: #f8fafc; border-bottom: 3px solid #1e40af; padding: 20px; margin-bottom: 20px; border-radius: 8px;">
-    <table style="width: 100%; border-collapse: collapse;">
+  <div style="position: relative; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; line-height: 1.4; font-size: 11px; background: white;">
+    
+    <!-- Watermark Logo (Antet) -->
+    ${logoBase64 ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.04; z-index: 0; pointer-events: none;">
+      <img src="${logoBase64}" style="width: 700px; height: auto;" alt="Watermark" />
+    </div>` : ''}
+    
+    <!-- Content (positioned above watermark) -->
+    <div style="position: relative; z-index: 1;">
+    
+    <!-- Header with Logo and Company Info -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; border: none;">
       <tr>
-        <td style="width: 50%; vertical-align: top;">
-          ${logoBase64 ? `
-            <img src="${logoBase64}" style="width: 140px; height: 70px; border-radius: 8px; object-fit: cover; border: 2px solid #1e40af; background: white; display: block; margin-bottom: 8px;" alt="Logo" />
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">MET GRUP MARKASIDIR</div>
-          ` : ''}
-          <div style="font-size: 10px; color: #64748b; margin-top: 8px;">Profesyonel Soğutma ve Klima Sistemleri</div>
-          <div style="font-size: 9px; color: #334155; margin-top: 8px;">
-            <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
-            <div>✉️ info@ekimsogutma.com</div>
-            <div>🌐 www.ekimsogutma.com</div>
-          </div>
+        <td style="width: 20%; vertical-align: top; border: none;">
+          ${logoBase64 ? `<img src="${logoBase64}" style="width: 100px; height: auto; display: block;" alt="Logo" />` : ''}
+          <div style="font-size: 7px; font-weight: 500; margin-top: 4px; color: #555;">EKİM SOĞUTMA MET GRUP MARKASIDIR</div>
         </td>
-        <td style="width: 50%; vertical-align: top; text-align: right;">
-          <div style="font-size: 14px; color: #1e40af; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">MÜŞTERİ BİLGİLERİ</div>
-          <div style="background: #ffffff; padding: 15px; border-radius: 8px; display: inline-block; text-align: left; min-width: 220px; border: 2px solid #1e40af; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 10px; line-height: 1.5; border-bottom: 2px solid #1e40af; padding: 8px; text-transform: uppercase; background: #f8fafc; border-radius: 4px;">${customerName}</div>
-            ${customerCompany ? `<div style="font-size: 14px; color: #1e293b; font-weight: 700; margin-bottom: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border-left: 3px solid #3b82f6;">ŞİRKET: ${customerCompany}</div>` : ""}
-            ${customerPhone ? `<div style="font-size: 13px; color: #1e293b; font-weight: 700; margin-top: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">TEL: ${customerPhone}</div>` : ""}
-            ${customerEmail ? `<div style="font-size: 12px; margin-top: 6px; color: #1e293b; font-weight: 600; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">E-POSTA: ${customerEmail}</div>` : ""}
-          </div>
-          <div style="margin-top: 15px; font-size: 10px;">
-            <div><strong>Teklif No:</strong> <span style="color: #1e40af; font-weight: 700;">#${data.quoteId}</span></div>
-            <div style="margin-top: 4px;"><strong>Tarih:</strong> ${new Date(data.createdAt).toLocaleDateString('tr-TR')}</div>
-            <div style="margin-top: 4px;"><strong>Geçerlilik:</strong> <span style="color: #dc2626; font-weight: 600;">${data.conditions.validityPeriod} gün</span></div>
-          </div>
+        <td style="width: 80%; vertical-align: top; font-size: 9px; text-align: right; padding-left: 15px; border: none;">
+          <div style="margin-bottom: 3px;"><strong>ADRES:</strong> Yeniçamlıca mah. Leman Ana cad. No:39/1-2 Ataşehir / İstanbul</div>
+          <div style="margin-bottom: 3px;"><strong>TELEFON:</strong> 0532 701 62 83</div>
+          <div><strong>WEB:</strong> http://ekimsogutma.com/</div>
         </td>
       </tr>
     </table>
-  </div>
 
-      <!-- Project Details -->
-  <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #1e40af;">
-    <div style="font-size: 12px; color: #0c4a6e; font-weight: 700; margin-bottom: 10px;">🏗️ PROJE DETAYLARI</div>
-    <table style="width: 100%; font-size: 10px;">
+    <!-- Form Title -->
+    <div style="text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 12px; border: 1.5px solid #333; padding: 8px; background: #f8f9fa;">
+      MÜŞTERİ TEKLİF VE SİPARİŞ FORMU
+    </div>
+
+    <!-- Customer Info Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; margin-bottom: 12px; font-size: 10px;">
       <tr>
-        <td style="width: 25%; padding: 4px 0;"><strong>Konu:</strong></td>
-        <td style="width: 25%; padding: 4px 0;">${data.projectDetails.projectDesign || '-'}</td>
-        <td style="width: 25%; padding: 4px 0;"><strong>Teslimat:</strong></td>
-        <td style="width: 25%; padding: 4px 0;">${data.conditions.deliveryTime || '-'}</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 15%; background: #f8f9fa; font-weight: 600; vertical-align: middle;">FİRMA ADI</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 35%; vertical-align: middle;">${data.customerInfo.company || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 20%; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF / SİPARİŞ NO</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 30%; vertical-align: middle;">${data.quoteId}</td>
       </tr>
       <tr>
-        <td style="padding: 4px 0;"><strong>Başlangıç:</strong></td>
-        <td style="padding: 4px 0;">${data.schedule.startDate ? new Date(data.schedule.startDate).toLocaleDateString('tr-TR') : '-'}</td>
-        <td style="padding: 4px 0;"><strong>Bitiş:</strong></td>
-        <td style="padding: 4px 0;">${data.schedule.endDate ? new Date(data.schedule.endDate).toLocaleDateString('tr-TR') : '-'}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">FİRMA YETKİLİSİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.customerInfo.name || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF TARİHİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${new Date(data.createdAt).toLocaleDateString('tr-TR')}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TELEFON</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.customerInfo.phone || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF SÜRESİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.conditions.validityPeriod} GÜNDÜR</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">ÖDEME ŞEKLİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle; white-space: pre-line;">${(data.projectDetails.projectDesign || '').replace(/\n/g, '<br/>')}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">BANKA HESAP BİLGİLERİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;"><strong>Garanti Bankası:</strong> TR23 0006 2000 2050 0006 2867 25</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">PROJE AÇIKLAMASI</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle; white-space: pre-line;" colspan="3">${(data.projectDetails.projectDescription || '').replace(/\n/g, '<br/>')}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">YÜKLENİCİ FİRMA</td>
+        <td style="border: 1px solid #666; padding: 6px;" colspan="3">MET GRUP DB TİCARET LİMİTED ŞİRKETİ</td>
       </tr>
     </table>
-    ${data.projectDetails.projectDescription ? `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #bae6fd; font-size: 10px;"><strong>Açıklama:</strong> ${data.projectDetails.projectDescription}</div>` : ''}
-  </div>
 
-      <!-- Items Table -->
-  <div style="margin-bottom: 20px;">
-    <h3 style="color: #1e40af; font-size: 13px; margin: 0 0 12px 0; font-weight: 700;">📦 TEKLİF KALEMLERİ</h3>
-  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; font-size: 11px;">
+    <!-- Items Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; margin-bottom: 12px; font-size: 10px;">
       <thead>
-        <tr style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white;">
-          <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; border: 1px solid #1e40af;">ÜRÜN</th>
-          <th style="padding: 10px; text-align: center; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 80px;">ADET</th>
-          <th style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 120px;">SATIŞ FİYATI</th>
-          <th style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 120px;">TOPLAM</th>
+        <tr style="background: #cfe2ff;">
+          <th style="border: 1px solid #666; padding: 6px; text-align: center; width: 5%; font-weight: 700;">NO</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: left; width: 50%; font-weight: 700;">ÜRÜN TANIMI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: center; width: 10%; font-weight: 700;">MİKTARI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: right; width: 17%; font-weight: 700;">BR.FİYATI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: right; width: 18%; font-weight: 700;">TUTARI</th>
         </tr>
       </thead>
       <tbody>
         ${data.items.map((item, index) => `
-          <tr style="background: ${index % 2 === 0 ? '#f8fafc' : 'white'};">
-            <td style="padding: 10px; font-size: 10px; border: 1px solid #e5e7eb; vertical-align: top;">
-              <div style="font-weight: 700; color: #1f2937;">${item.product.customName || item.product.name}</div>
-              ${item.product.brand || item.product.model ? `<div style="font-size: 9px; color: #6b7280; margin-top: 4px;">${item.product.brand || ''} ${item.product.model || ''}</div>` : ''}
-              ${item.product.code ? `<div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Kod: ${item.product.code}</div>` : ''}
+          <tr>
+            <td style="border: 1px solid #666; padding: 6px; text-align: center; vertical-align: middle;">${index + 1}</td>
+            <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">
+              <strong>${item.product.customName || item.product.name}</strong>
+              ${item.product.brand || item.product.model ? `<div style="font-size: 9px; color: #666; margin-top: 2px;">${item.product.brand || ''} ${item.product.model || ''}</div>` : ''}
             </td>
-            <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #1e40af; border: 1px solid #e5e7eb; vertical-align: middle;">${item.quantity}</td>
-            <td style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; color: #059669; border: 1px solid #e5e7eb; vertical-align: middle;">€${item.unitPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-            <td style="padding: 10px; text-align: right; font-size: 11px; font-weight: 800; color: #dc2626; border: 1px solid #e5e7eb; vertical-align: middle;">€${item.total.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+            <td style="border: 1px solid #666; padding: 6px; text-align: center; vertical-align: middle; font-weight: 600;">${item.quantity}</td>
+            <td style="border: 1px solid #666; padding: 6px; text-align: right; vertical-align: middle;">${item.unitPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+            <td style="border: 1px solid #666; padding: 6px; text-align: right; vertical-align: middle; font-weight: 700;">${item.total.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
           </tr>
         `).join('')}
+        
+        <!-- Subtotal Row -->
+        <tr style="background: #ffeb3b;">
+          <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">TOPLAM TUTAR</td>
+          <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${data.items.reduce((sum, item) => sum + item.total, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+        </tr>
+        
+        <!-- Empty separator row -->
+        <tr>
+          <td colspan="5" style="border: 1px solid #666; padding: 4px;"></td>
+        </tr>
+        
+        <!-- General Total Row -->
+        <tr style="background: #ffeb3b;">
+          <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">GENEL TOPLAM</td>
+          <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${data.items.reduce((sum, item) => sum + item.total, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+        </tr>
       </tbody>
     </table>
-    <div style="width: 100%; text-align: right; font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px;">
-      <div style="margin-bottom: 8px;">Ara Toplam: €${data.items.reduce((sum, item) => sum + item.total, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-      <div style="font-size: 13px;">KDV (%20) Dahil Toplam: <span style="color:#dc2626;">€${(data.items.reduce((sum, item) => sum + item.total, 0) * 1.2).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span></div>
+
+    <!-- Note Box -->
+    <div style="font-size: 9px; margin-bottom: 12px; padding: 8px; border: 1px solid #dc3545; background: #fff5f5; color: #dc3545;">
+      Cihazlarımız 2 yıl garantilidir. Teklifimize nakliye, su gideri, cihazlara gelecek besleme hattı ve inşai işler dahil değildir.<br/>
+      <strong>Teklifimiz ${data.conditions.validityPeriod} gün geçerlidir.</strong>
     </div>
-    <div style="font-size: 9px; margin-top: 10px; color: #64748b;">
-      <div>• Ürünlere <strong>2 yıl garanti</strong></div>
-      <div>• Teklif sadece belirtilen ürünler için geçerli</div>
+
+    <!-- Final Totals Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; font-size: 10px; margin-bottom: 12px;">
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">TOPLAM TUTAR</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; width: 18%; vertical-align: middle;">${data.items.reduce((sum, item) => sum + item.total, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+      </tr>
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">%20 KDV</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${(data.items.reduce((sum, item) => sum + item.total, 0) * 0.20).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+      </tr>
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; font-size: 11px; vertical-align: middle;">GENEL TOPLAM</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; font-size: 11px; vertical-align: middle;">${(data.items.reduce((sum, item) => sum + item.total, 0) * 1.20).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} €</td>
+      </tr>
+    </table>
+
+    <!-- Signature Section -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; font-size: 10px;">
+      <tr>
+        <td style="border: 1px solid #666; padding: 25px 10px 10px 10px; width: 50%; vertical-align: top;">
+          <div style="font-weight: 700; margin-bottom: 20px;">SİPARİŞ ALAN / TEKLİF VEREN</div>
+          <div style="margin-top: 8px;">Ad-Soyad:</div>
+          <div style="margin-top: 8px;">İmza:</div>
+        </td>
+        <td style="border: 1px solid #666; padding: 25px 10px 10px 10px; width: 50%; vertical-align: top;">
+          <div style="font-weight: 700; margin-bottom: 20px;">MÜŞTERİ ONAYI</div>
+          <div style="margin-top: 8px;">Ad-Soyad:</div>
+          <div style="margin-top: 8px;">İmza:</div>
+          <div style="margin-top: 15px; text-align: center; font-size: 9px;">( LÜTFEN TEYİT EDİNİZ )</div>
+        </td>
+      </tr>
+    </table>
+
     </div>
+    <!-- End Content Wrapper -->
   </div>
-
-      <!-- İmza Bölümü (Sadece metin) -->
-      <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-        <table style="width: 100%;">
-          <tr>
-            <td style="width: 50%; vertical-align: bottom; padding-bottom: 10px;">
-              <div style="font-size: 11px; font-weight: bold; color: #1e293b; margin-top: 8px; border-top: 1px solid #1e293b; display: inline-block; padding-top: 4px; min-width: 150px; text-align: center;">Ekim Soğutma</div>
-            </td>
-            <td style="width: 50%; vertical-align: bottom; text-align: right; padding-bottom: 10px;">
-              <div style="font-size: 11px; font-weight: bold; color: #1e293b; border-top: 1px solid #1e293b; display: inline-block; padding-top: 4px; min-width: 150px; text-align: center;">Müşteri Onayı</div>
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Footer -->
-      <div style="margin-top: 40px; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 10px; margin-bottom: 8px;">
-          <span style="margin: 0 10px;">🌐 www.ekimsogutma.com</span>
-          <span style="margin: 0 10px;">✉️ info@ekimsogutma.com</span>
-          <span style="margin: 0 10px;">📞 +90 532 701 6283 / +90 542 457 2553</span>
-        </div>
-        <div style="font-size: 9px; opacity: 0.8;">© ${new Date().getFullYear()} Ekim Soğutma. Tüm hakları saklıdır.</div>
-      </div>
-    </div>
+  <!-- End Main Container -->
   `;
 
   // Add the temporary div to the document
   document.body.appendChild(tempDiv);
 
   try {
-    // Convert HTML to canvas
+    // Convert HTML to canvas with high quality settings
     console.log('HTML canvas\'a dönüştürülüyor...');
     const canvas = await html2canvas(tempDiv, {
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      scale: 5, // Yüksek kalite için scale arttırıldı (2x veya 3x önerilir)
+      logging: false,
+      windowWidth: tempDiv.scrollWidth,
+      windowHeight: tempDiv.scrollHeight,
+      imageTimeout: 0
     });
-    console.log('Canvas oluşturuldu');
+    console.log('Canvas oluşturuldu, boyut:', canvas.width, 'x', canvas.height);
 
-    // Create PDF (tek sayfa)
+    // Create PDF with high quality
     console.log('PDF oluşturuluyor...');
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 1.0); // JPEG format, maksimum kalite
     const pdf = new jsPDF('p', 'mm', 'a4');
     const imgWidth = 210; // A4 width in mm
     const imgHeight = 297; // A4 height in mm
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    
+    // Yüksek kalitede resim ekle
+    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
 
     // Download the PDF
     const fileName = `Teklif_${data.quoteId}_${data.customerInfo.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;

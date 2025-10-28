@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Product, Quote, QuoteItem, Customer } from '@/lib/database';
-import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
 import { generateQuoteHTML, QuoteHTMLData } from '@/lib/htmlQuoteGenerator';
+import { generateQuotePDF, QuotePDFData } from '@/lib/pdfGenerator';
 
 // Types and Interfaces
 interface CartItem {
@@ -174,6 +174,68 @@ export default function Home() {
     fetchProducts();
     fetchCustomers();
     loadSuppliers();
+    
+    // Düzenleme modunu kontrol et
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('edit') === 'true') {
+      const editData = sessionStorage.getItem('editQuote');
+      if (editData) {
+        try {
+          const quoteData = JSON.parse(editData);
+          
+          // Müşteri bilgilerini yükle
+          if (quoteData.customer_name) {
+            setCustomerInfo({
+              name: quoteData.customer_name || '',
+              company: quoteData.company || '',
+              phone: quoteData.customer_phone || '',
+              email: quoteData.customer_email || '',
+              address: ''
+            });
+          }
+          
+          // Ürünleri sepete yükle
+          if (quoteData.items && quoteData.items.length > 0) {
+            const cartItems = quoteData.items.map((item: any) => ({
+              product: item.product,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              salesPrice: item.salesPrice || item.unitPrice
+            }));
+            setCart(cartItems);
+          }
+          
+          // Koşulları yükle
+          if (quoteData.conditions) {
+            setConditions({
+              validityPeriod: quoteData.conditions.validityPeriod || '30',
+              deliveryTime: quoteData.conditions.deliveryTime || ''
+            });
+          }
+          
+          // Notes'tan proje bilgilerini parse et
+          if (quoteData.notes) {
+            const projectDesignMatch = quoteData.notes.match(/Ödeme Şekli: ([^\n]*)/);
+            const projectDescMatch = quoteData.notes.match(/Proje Açıklama: ([^\n]*)/);
+            
+            if (projectDesignMatch || projectDescMatch) {
+              setProjectDetails({
+                projectDesign: projectDesignMatch?.[1] || '',
+                projectDescription: projectDescMatch?.[1] || ''
+              });
+            }
+          }
+          
+          // SessionStorage'ı temizle
+          sessionStorage.removeItem('editQuote');
+          
+          // URL'den edit parametresini kaldır
+          window.history.replaceState({}, '', '/');
+        } catch (error) {
+          console.error('Teklif verileri yüklenirken hata:', error);
+        }
+      }
+    }
   }, []);
 
   // Supplier loading functions
@@ -912,7 +974,7 @@ export default function Home() {
         company: customerInfo.company?.trim() || undefined,
         total_amount: totalAmount,
         status: 'draft',
-        notes: `Proje Tasarım: ${projectDetails.projectDesign}
+        notes: `Ödeme Şekli: ${projectDetails.projectDesign}
 Proje Açıklama: ${projectDetails.projectDescription}
 Başlangıç: ${schedule.startDate}
 Bitiş: ${schedule.endDate}
@@ -1019,9 +1081,66 @@ Teslim: ${conditions.deliveryTime}`
         setSelectedCustomer('');
         setActiveStep(1);
 
-        // Teklifler sayfasına yönlendir
-        alert(`Teklif #${quoteId} başarıyla oluşturuldu! Teklifler sayfasına yönlendiriliyorsunuz.`);
-        window.location.href = '/quotes';
+        // PDF oluştur ve indir (teklifler sayfasındaki gibi)
+        try {
+          // Teklif detaylarını al
+          const quoteResponse = await fetch(`/api/quotes/${quoteId}`);
+          if (!quoteResponse.ok) {
+            throw new Error('Teklif detayları alınamadı');
+          }
+          
+          const quoteDetails = await quoteResponse.json();
+          
+          // HTML data hazırla
+          const subtotal = quoteDetails.total_amount / 1.20;
+          const kdv = quoteDetails.total_amount - subtotal;
+
+          const htmlData: QuoteHTMLData = {
+            quoteId: quoteDetails.id,
+            customerInfo: {
+              name: (quoteDetails.customer_name || 'Müşteri adı yok').trim(),
+              company: (quoteDetails.company || '').trim(),
+              email: (quoteDetails.customer_email || '').trim(),
+              phone: (quoteDetails.customer_phone || '').trim(),
+              address: ''
+            },
+            projectDetails: {
+              projectDesign: projectDetails.projectDesign,
+              projectDescription: projectDetails.projectDescription
+            },
+            schedule: {
+              startDate: schedule.startDate,
+              endDate: schedule.endDate
+            },
+            conditions: {
+              validityPeriod: conditions.validityPeriod,
+              deliveryTime: conditions.deliveryTime
+            },
+            items: quoteDetails.items?.map((item: any) => ({
+              product: {
+                name: item.product_name || 'Unknown Product',
+                brand: item.brand || '',
+                model: item.model || '',
+                code: item.code || ''
+              },
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
+              total: item.unit_price * item.quantity
+            })) || [],
+            subtotal: subtotal,
+            kdv: kdv,
+            total: quoteDetails.total_amount,
+            createdAt: quoteDetails.created_at
+          };
+
+          // PDF oluştur ve indir
+          generateQuoteHTML(htmlData);
+          
+          alert(`Teklif #${quoteId} başarıyla oluşturuldu ve PDF indiriliyor!`);
+        } catch (pdfError) {
+          console.error('PDF oluşturma hatası:', pdfError);
+          alert(`Teklif #${quoteId} oluşturuldu ancak PDF oluşturulamadı.`);
+        }
       } else {
         console.error('API Error Response:', result);
         alert(`Teklif oluşturulurken hata oluştu: ${result.error || 'Bilinmeyen hata'}`);
@@ -1267,7 +1386,7 @@ Teslim: ${conditions.deliveryTime}`
               <h2 className="text-2xl font-bold mb-6 text-green-800">Proje Detayları</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-4 rounded-lg shadow-sm">
-                  <label className="block text-sm font-medium mb-2 text-green-700">Proje Tasarımı</label>
+                  <label className="block text-sm font-medium mb-2 text-green-700">Ödeme Şekli</label>
                   <textarea
                     value={projectDetails.projectDesign}
                     onChange={(e) =>
@@ -1275,7 +1394,7 @@ Teslim: ${conditions.deliveryTime}`
                     }
                     className="w-full p-2 border rounded-lg form-input bg-green-50 border-green-200"
                     rows={4}
-                    placeholder="Proje tasarımını açıklayın"
+                    placeholder="Ödeme şeklini belirtin"
                   />
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-sm">
@@ -2213,7 +2332,7 @@ Teslim: ${conditions.deliveryTime}`
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-sm">
                   <h3 className="text-lg font-semibold mb-3 text-gray-700">Proje Detayları</h3>
-                  <p className="text-gray-600">Proje Tasarımı: {projectDetails.projectDesign}</p>
+                  <p className="text-gray-600">Ödeme Şekli: {projectDetails.projectDesign}</p>
                   <p className="text-gray-600">Proje Açıklaması: {projectDetails.projectDescription}</p>
                   <p className="text-gray-600">Başlangıç Tarihi: {schedule.startDate}</p>
                   <p className="text-gray-600">Bitiş Tarihi: {schedule.endDate}</p>

@@ -468,7 +468,7 @@ function generateHTML(quote, items) {
         <h1>MET GRUP MARKASIDIR</h1>
         <p>Profesyonel Soğutma ve Klima Sistemleri</p>
         <div class="company-contacts">
-          <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
+          <div>📞 +90 542 457 2553</div>
           <div>✉️ info@ekimsogutma.com</div>
           <div>🌐 www.ekimsogutma.com</div>
         </div>
@@ -595,7 +595,7 @@ function generateHTML(quote, items) {
     <div class="footer-content">
       <div>🌐 www.ekimsogutma.com</div>
       <div>✉️ info@ekimsogutma.com</div>
-      <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
+      <div>📞 +90 542 457 2553</div>
     </div>
     <div class="footer-copyright">© ${new Date().getFullYear()} Ekim Soğutma. Tüm hakları saklıdır.</div>
   </div>

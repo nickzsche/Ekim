@@ -399,6 +399,7 @@ __turbopack_context__.s([
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$html2canvas$2f$dist$2f$html2canvas$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/html2canvas/dist/html2canvas.esm.js [app-ssr] (ecmascript)");
 'use client';
 ;
+// Updated: 2025-10-28 - Excel format (simple black/white tables)
 // Helper function to load image as base64
 const loadImageAsBase64 = async (imagePath)=>{
     try {
@@ -446,8 +447,9 @@ const generateQuotePDF = async (data)=>{
         tempDiv.style.width = '794px'; // A4 width in pixels at 96 DPI
         tempDiv.style.backgroundColor = 'white';
         tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.maxHeight = '1050px'; // Tek sayfa için yükseklik sınırı (A4: 1122px, biraz boşluk bırak)
-        tempDiv.style.overflow = 'hidden';
+        // Daha küçük fontlarla daha az sayfa tüketmek için temel font küçültüldü
+        tempDiv.style.maxHeight = 'none';
+        tempDiv.style.overflow = 'visible';
         // Create the HTML content for the PDF
         // Müşteri bilgilerini hazırla
         const customerName = data.customerInfo.name || "Müşteri Adı Belirtilmemiş";
@@ -458,149 +460,198 @@ const generateQuotePDF = async (data)=>{
         console.log("Şirket:", customerCompany);
         console.log("Telefon:", customerPhone);
         tempDiv.innerHTML = `
-  <div style="padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #2c3e50; line-height: 1.4; font-size: 11px; background: white;">
-      <!-- Header -->
-  <div style="background: #f8fafc; border-bottom: 3px solid #1e40af; padding: 20px; margin-bottom: 20px; border-radius: 8px;">
-    <table style="width: 100%; border-collapse: collapse;">
+  <div style="position: relative; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; line-height: 1.4; font-size: 11px; background: white;">
+    
+    <!-- Watermark Logo (Antet) -->
+    ${logoBase64 ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.04; z-index: 0; pointer-events: none;">
+      <img src="${logoBase64}" style="width: 700px; height: auto;" alt="Watermark" />
+    </div>` : ''}
+    
+    <!-- Content (positioned above watermark) -->
+    <div style="position: relative; z-index: 1;">
+    
+    <!-- Header with Logo and Company Info -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; border: none;">
       <tr>
-        <td style="width: 50%; vertical-align: top;">
-          ${logoBase64 ? `
-            <img src="${logoBase64}" style="width: 140px; height: 70px; border-radius: 8px; object-fit: cover; border: 2px solid #1e40af; background: white; display: block; margin-bottom: 8px;" alt="Logo" />
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">MET GRUP MARKASIDIR</div>
-          ` : ''}
-          <div style="font-size: 10px; color: #64748b; margin-top: 8px;">Profesyonel Soğutma ve Klima Sistemleri</div>
-          <div style="font-size: 9px; color: #334155; margin-top: 8px;">
-            <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
-            <div>✉️ info@ekimsogutma.com</div>
-            <div>🌐 www.ekimsogutma.com</div>
-          </div>
+        <td style="width: 20%; vertical-align: top; border: none;">
+          ${logoBase64 ? `<img src="${logoBase64}" style="width: 100px; height: auto; display: block;" alt="Logo" />` : ''}
+          <div style="font-size: 7px; font-weight: 500; margin-top: 4px; color: #555;">EKİM SOĞUTMA MET GRUP MARKASIDIR</div>
         </td>
-        <td style="width: 50%; vertical-align: top; text-align: right;">
-          <div style="font-size: 14px; color: #1e40af; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">MÜŞTERİ BİLGİLERİ</div>
-          <div style="background: #ffffff; padding: 15px; border-radius: 8px; display: inline-block; text-align: left; min-width: 220px; border: 2px solid #1e40af; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 10px; line-height: 1.5; border-bottom: 2px solid #1e40af; padding: 8px; text-transform: uppercase; background: #f8fafc; border-radius: 4px;">${customerName}</div>
-            ${customerCompany ? `<div style="font-size: 14px; color: #1e293b; font-weight: 700; margin-bottom: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border-left: 3px solid #3b82f6;">ŞİRKET: ${customerCompany}</div>` : ""}
-            ${customerPhone ? `<div style="font-size: 13px; color: #1e293b; font-weight: 700; margin-top: 8px; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">TEL: ${customerPhone}</div>` : ""}
-            ${customerEmail ? `<div style="font-size: 12px; margin-top: 6px; color: #1e293b; font-weight: 600; line-height: 1.5; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">E-POSTA: ${customerEmail}</div>` : ""}
-          </div>
-          <div style="margin-top: 15px; font-size: 10px;">
-            <div><strong>Teklif No:</strong> <span style="color: #1e40af; font-weight: 700;">#${data.quoteId}</span></div>
-            <div style="margin-top: 4px;"><strong>Tarih:</strong> ${new Date(data.createdAt).toLocaleDateString('tr-TR')}</div>
-            <div style="margin-top: 4px;"><strong>Geçerlilik:</strong> <span style="color: #dc2626; font-weight: 600;">${data.conditions.validityPeriod} gün</span></div>
-          </div>
+        <td style="width: 80%; vertical-align: top; font-size: 9px; text-align: right; padding-left: 15px; border: none;">
+          <div style="margin-bottom: 3px;"><strong>ADRES:</strong> Yeniçamlıca mah. Leman Ana cad. No:39/1-2 Ataşehir / İstanbul</div>
+          <div style="margin-bottom: 3px;"><strong>TELEFON:</strong> 0532 701 62 83</div>
+          <div><strong>WEB:</strong> http://ekimsogutma.com/</div>
         </td>
       </tr>
     </table>
-  </div>
 
-      <!-- Project Details -->
-  <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #1e40af;">
-    <div style="font-size: 12px; color: #0c4a6e; font-weight: 700; margin-bottom: 10px;">🏗️ PROJE DETAYLARI</div>
-    <table style="width: 100%; font-size: 10px;">
+    <!-- Form Title -->
+    <div style="text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 12px; border: 1.5px solid #333; padding: 8px; background: #f8f9fa;">
+      MÜŞTERİ TEKLİF VE SİPARİŞ FORMU
+    </div>
+
+    <!-- Customer Info Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; margin-bottom: 12px; font-size: 10px;">
       <tr>
-        <td style="width: 25%; padding: 4px 0;"><strong>Konu:</strong></td>
-        <td style="width: 25%; padding: 4px 0;">${data.projectDetails.projectDesign || '-'}</td>
-        <td style="width: 25%; padding: 4px 0;"><strong>Teslimat:</strong></td>
-        <td style="width: 25%; padding: 4px 0;">${data.conditions.deliveryTime || '-'}</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 15%; background: #f8f9fa; font-weight: 600; vertical-align: middle;">FİRMA ADI</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 35%; vertical-align: middle;">${data.customerInfo.company || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 20%; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF / SİPARİŞ NO</td>
+        <td style="border: 1px solid #666; padding: 6px; width: 30%; vertical-align: middle;">${data.quoteId}</td>
       </tr>
       <tr>
-        <td style="padding: 4px 0;"><strong>Başlangıç:</strong></td>
-        <td style="padding: 4px 0;">${data.schedule.startDate ? new Date(data.schedule.startDate).toLocaleDateString('tr-TR') : '-'}</td>
-        <td style="padding: 4px 0;"><strong>Bitiş:</strong></td>
-        <td style="padding: 4px 0;">${data.schedule.endDate ? new Date(data.schedule.endDate).toLocaleDateString('tr-TR') : '-'}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">FİRMA YETKİLİSİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.customerInfo.name || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF TARİHİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${new Date(data.createdAt).toLocaleDateString('tr-TR')}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TELEFON</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.customerInfo.phone || ''}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">TEKLİF SÜRESİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">${data.conditions.validityPeriod} GÜNDÜR</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">ÖDEME ŞEKLİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle; white-space: pre-line;">${(data.projectDetails.projectDesign || '').replace(/\n/g, '<br/>')}</td>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">BANKA HESAP BİLGİLERİ</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;"><strong>Garanti Bankası:</strong> TR23 0006 2000 2050 0006 2867 25</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">PROJE AÇIKLAMASI</td>
+        <td style="border: 1px solid #666; padding: 6px; vertical-align: middle; white-space: pre-line;" colspan="3">${(data.projectDetails.projectDescription || '').replace(/\n/g, '<br/>')}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #666; padding: 6px; background: #f8f9fa; font-weight: 600; vertical-align: middle;">YÜKLENİCİ FİRMA</td>
+        <td style="border: 1px solid #666; padding: 6px;" colspan="3">MET GRUP DB TİCARET LİMİTED ŞİRKETİ</td>
       </tr>
     </table>
-    ${data.projectDetails.projectDescription ? `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #bae6fd; font-size: 10px;"><strong>Açıklama:</strong> ${data.projectDetails.projectDescription}</div>` : ''}
-  </div>
 
-      <!-- Items Table -->
-  <div style="margin-bottom: 20px;">
-    <h3 style="color: #1e40af; font-size: 13px; margin: 0 0 12px 0; font-weight: 700;">📦 TEKLİF KALEMLERİ</h3>
-  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; font-size: 11px;">
+    <!-- Items Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; margin-bottom: 12px; font-size: 10px;">
       <thead>
-        <tr style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white;">
-          <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; border: 1px solid #1e40af;">ÜRÜN</th>
-          <th style="padding: 10px; text-align: center; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 80px;">ADET</th>
-          <th style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 120px;">SATIŞ FİYATI</th>
-          <th style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; border: 1px solid #1e40af; width: 120px;">TOPLAM</th>
+        <tr style="background: #cfe2ff;">
+          <th style="border: 1px solid #666; padding: 6px; text-align: center; width: 5%; font-weight: 700;">NO</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: left; width: 50%; font-weight: 700;">ÜRÜN TANIMI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: center; width: 10%; font-weight: 700;">MİKTARI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: right; width: 17%; font-weight: 700;">BR.FİYATI</th>
+          <th style="border: 1px solid #666; padding: 6px; text-align: right; width: 18%; font-weight: 700;">TUTARI</th>
         </tr>
       </thead>
       <tbody>
         ${data.items.map((item, index)=>`
-          <tr style="background: ${index % 2 === 0 ? '#f8fafc' : 'white'};">
-            <td style="padding: 10px; font-size: 10px; border: 1px solid #e5e7eb; vertical-align: top;">
-              <div style="font-weight: 700; color: #1f2937;">${item.product.customName || item.product.name}</div>
-              ${item.product.brand || item.product.model ? `<div style="font-size: 9px; color: #6b7280; margin-top: 4px;">${item.product.brand || ''} ${item.product.model || ''}</div>` : ''}
-              ${item.product.code ? `<div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Kod: ${item.product.code}</div>` : ''}
+          <tr>
+            <td style="border: 1px solid #666; padding: 6px; text-align: center; vertical-align: middle;">${index + 1}</td>
+            <td style="border: 1px solid #666; padding: 6px; vertical-align: middle;">
+              <strong>${item.product.customName || item.product.name}</strong>
+              ${item.product.brand || item.product.model ? `<div style="font-size: 9px; color: #666; margin-top: 2px;">${item.product.brand || ''} ${item.product.model || ''}</div>` : ''}
             </td>
-            <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #1e40af; border: 1px solid #e5e7eb; vertical-align: middle;">${item.quantity}</td>
-            <td style="padding: 10px; text-align: right; font-size: 11px; font-weight: 700; color: #059669; border: 1px solid #e5e7eb; vertical-align: middle;">€${item.unitPrice.toLocaleString('tr-TR', {
+            <td style="border: 1px solid #666; padding: 6px; text-align: center; vertical-align: middle; font-weight: 600;">${item.quantity}</td>
+            <td style="border: 1px solid #666; padding: 6px; text-align: right; vertical-align: middle;">${item.unitPrice.toLocaleString('tr-TR', {
                 minimumFractionDigits: 2
-            })}</td>
-            <td style="padding: 10px; text-align: right; font-size: 11px; font-weight: 800; color: #dc2626; border: 1px solid #e5e7eb; vertical-align: middle;">€${item.total.toLocaleString('tr-TR', {
+            })} €</td>
+            <td style="border: 1px solid #666; padding: 6px; text-align: right; vertical-align: middle; font-weight: 700;">${item.total.toLocaleString('tr-TR', {
                 minimumFractionDigits: 2
-            })}</td>
+            })} €</td>
           </tr>
         `).join('')}
+        
+        <!-- Subtotal Row -->
+        <tr style="background: #ffeb3b;">
+          <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">TOPLAM TUTAR</td>
+          <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${data.items.reduce((sum, item)=>sum + item.total, 0).toLocaleString('tr-TR', {
+            minimumFractionDigits: 2
+        })} €</td>
+        </tr>
+        
+        <!-- Empty separator row -->
+        <tr>
+          <td colspan="5" style="border: 1px solid #666; padding: 4px;"></td>
+        </tr>
+        
+        <!-- General Total Row -->
+        <tr style="background: #ffeb3b;">
+          <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">GENEL TOPLAM</td>
+          <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${data.items.reduce((sum, item)=>sum + item.total, 0).toLocaleString('tr-TR', {
+            minimumFractionDigits: 2
+        })} €</td>
+        </tr>
       </tbody>
     </table>
-    <div style="width: 100%; text-align: right; font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px;">
-      <div style="margin-bottom: 8px;">Ara Toplam: €${data.items.reduce((sum, item)=>sum + item.total, 0).toLocaleString('tr-TR', {
-            minimumFractionDigits: 2
-        })}</div>
-      <div style="font-size: 13px;">KDV (%20) Dahil Toplam: <span style="color:#dc2626;">€${(data.items.reduce((sum, item)=>sum + item.total, 0) * 1.2).toLocaleString('tr-TR', {
-            minimumFractionDigits: 2
-        })}</span></div>
+
+    <!-- Note Box -->
+    <div style="font-size: 9px; margin-bottom: 12px; padding: 8px; border: 1px solid #dc3545; background: #fff5f5; color: #dc3545;">
+      Cihazlarımız 2 yıl garantilidir. Teklifimize nakliye, su gideri, cihazlara gelecek besleme hattı ve inşai işler dahil değildir.<br/>
+      <strong>Teklifimiz ${data.conditions.validityPeriod} gün geçerlidir.</strong>
     </div>
-    <div style="font-size: 9px; margin-top: 10px; color: #64748b;">
-      <div>• Ürünlere <strong>2 yıl garanti</strong></div>
-      <div>• Teklif sadece belirtilen ürünler için geçerli</div>
+
+    <!-- Final Totals Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; font-size: 10px; margin-bottom: 12px;">
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">TOPLAM TUTAR</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; width: 18%; vertical-align: middle;">${data.items.reduce((sum, item)=>sum + item.total, 0).toLocaleString('tr-TR', {
+            minimumFractionDigits: 2
+        })} €</td>
+      </tr>
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">%20 KDV</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; vertical-align: middle;">${(data.items.reduce((sum, item)=>sum + item.total, 0) * 0.20).toLocaleString('tr-TR', {
+            minimumFractionDigits: 2
+        })} €</td>
+      </tr>
+      <tr style="background: #ffeb3b;">
+        <td colspan="4" style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; font-size: 11px; vertical-align: middle;">GENEL TOPLAM</td>
+        <td style="border: 1px solid #666; padding: 6px; text-align: right; font-weight: 700; font-size: 11px; vertical-align: middle;">${(data.items.reduce((sum, item)=>sum + item.total, 0) * 1.20).toLocaleString('tr-TR', {
+            minimumFractionDigits: 2
+        })} €</td>
+      </tr>
+    </table>
+
+    <!-- Signature Section -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #666; font-size: 10px;">
+      <tr>
+        <td style="border: 1px solid #666; padding: 25px 10px 10px 10px; width: 50%; vertical-align: top;">
+          <div style="font-weight: 700; margin-bottom: 20px;">SİPARİŞ ALAN / TEKLİF VEREN</div>
+          <div style="margin-top: 8px;">Ad-Soyad:</div>
+          <div style="margin-top: 8px;">İmza:</div>
+        </td>
+        <td style="border: 1px solid #666; padding: 25px 10px 10px 10px; width: 50%; vertical-align: top;">
+          <div style="font-weight: 700; margin-bottom: 20px;">MÜŞTERİ ONAYI</div>
+          <div style="margin-top: 8px;">Ad-Soyad:</div>
+          <div style="margin-top: 8px;">İmza:</div>
+          <div style="margin-top: 15px; text-align: center; font-size: 9px;">( LÜTFEN TEYİT EDİNİZ )</div>
+        </td>
+      </tr>
+    </table>
+
     </div>
+    <!-- End Content Wrapper -->
   </div>
-
-      <!-- İmza Bölümü (Sadece metin) -->
-      <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-        <table style="width: 100%;">
-          <tr>
-            <td style="width: 50%; vertical-align: bottom; padding-bottom: 10px;">
-              <div style="font-size: 11px; font-weight: bold; color: #1e293b; margin-top: 8px; border-top: 1px solid #1e293b; display: inline-block; padding-top: 4px; min-width: 150px; text-align: center;">Ekim Soğutma</div>
-            </td>
-            <td style="width: 50%; vertical-align: bottom; text-align: right; padding-bottom: 10px;">
-              <div style="font-size: 11px; font-weight: bold; color: #1e293b; border-top: 1px solid #1e293b; display: inline-block; padding-top: 4px; min-width: 150px; text-align: center;">Müşteri Onayı</div>
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Footer -->
-      <div style="margin-top: 40px; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 10px; margin-bottom: 8px;">
-          <span style="margin: 0 10px;">🌐 www.ekimsogutma.com</span>
-          <span style="margin: 0 10px;">✉️ info@ekimsogutma.com</span>
-          <span style="margin: 0 10px;">📞 +90 532 701 6283 / +90 542 457 2553</span>
-        </div>
-        <div style="font-size: 9px; opacity: 0.8;">© ${new Date().getFullYear()} Ekim Soğutma. Tüm hakları saklıdır.</div>
-      </div>
-    </div>
+  <!-- End Main Container -->
   `;
         // Add the temporary div to the document
         document.body.appendChild(tempDiv);
         try {
-            // Convert HTML to canvas
+            // Convert HTML to canvas with high quality settings
             console.log('HTML canvas\'a dönüştürülüyor...');
             const canvas = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$html2canvas$2f$dist$2f$html2canvas$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])(tempDiv, {
                 useCORS: true,
                 allowTaint: true,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                scale: 5,
+                logging: false,
+                windowWidth: tempDiv.scrollWidth,
+                windowHeight: tempDiv.scrollHeight,
+                imageTimeout: 0
             });
-            console.log('Canvas oluşturuldu');
-            // Create PDF (tek sayfa)
+            console.log('Canvas oluşturuldu, boyut:', canvas.width, 'x', canvas.height);
+            // Create PDF with high quality
             console.log('PDF oluşturuluyor...');
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/jpeg', 1.0); // JPEG format, maksimum kalite
             const pdf = new jsPDF('p', 'mm', 'a4');
             const imgWidth = 210; // A4 width in mm
             const imgHeight = 297; // A4 height in mm
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            // Yüksek kalitede resim ekle
+            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
             // Download the PDF
             const fileName = `Teklif_${data.quoteId}_${data.customerInfo.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
             console.log('PDF indiriliyor:', fileName);
@@ -626,943 +677,16 @@ __turbopack_context__.s([
     "generateQuoteHTML",
     ()=>generateQuoteHTML
 ]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$pdfGenerator$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/pdfGenerator.ts [app-ssr] (ecmascript)");
 'use client';
-const generateQuoteHTML = (data)=>{
-    // Yeni pencere aç
-    const printWindow = window.open('', '_blank', 'width=800,height=1000');
-    if (!printWindow) {
-        alert('Pop-up engelleyici aktif! Lütfen pop-up\'lara izin verin.');
-        return;
-    }
-    // HTML içeriği
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teklif #${data.quoteId} - ${data.customerInfo.name}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    
-    @media print {
-      @page {
-        size: A4;
-        margin: 15mm;
-      }
-      body {
-        margin: 0;
-        padding: 0;
-        background: white;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      .no-print {
-        display: none !important;
-      }
-      .container {
-        box-shadow: none !important;
-        margin-bottom: 0 !important;
-      }
-      .header {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      .footer {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
-      padding: 30px 20px;
-      color: #1a202c;
-      line-height: 1.6;
-      min-height: auto;
-    }
-    
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-      border-radius: 16px;
-      overflow: hidden;
-      margin-bottom: 30px;
-    }
-    
-    .print-button {
-      position: fixed;
-      top: 30px;
-      right: 30px;
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: white;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
-      z-index: 1000;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-family: 'Inter', sans-serif;
-    }
-    
-    .print-button:hover {
-      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.5);
-    }
-    
-    .print-button:active {
-      transform: translateY(0);
-    }
-    
-    .print-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    /* Header - Modern & Elegant */
-    .header {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-      padding: 40px;
-      color: white;
-      position: relative;
-      overflow: hidden;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    
-    .header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 300px;
-      height: 300px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 50%;
-      transform: translate(50%, -50%);
-    }
-    
-    .header-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .company-section .logo {
-      width: 160px;
-      height: auto;
-      margin-bottom: 15px;
-      filter: brightness(0) invert(1);
-    }
-    
-    .company-section h1 {
-      font-size: 11px;
-      font-weight: 600;
-      opacity: 0.9;
-      margin-bottom: 5px;
-      letter-spacing: 1px;
-    }
-    
-    .company-section p {
-      font-size: 13px;
-      opacity: 0.85;
-      font-weight: 500;
-    }
-    
-    .company-contacts {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      font-size: 11px;
-      opacity: 0.9;
-    }
-    
-    .company-contacts div {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    /* Customer Info - Elegant Card */
-    .customer-section {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 16px;
-      padding: 24px;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    
-    .customer-section h2 {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 16px;
-      opacity: 0.9;
-    }
-    
-    .customer-name {
-      font-size: 24px;
-      font-weight: 800;
-      margin-bottom: 16px;
-      line-height: 1.2;
-    }
-    
-    .customer-details {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .customer-detail {
-      font-size: 13px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .quote-meta {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      font-size: 11px;
-    }
-    
-    .quote-meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    
-    .quote-meta-item strong {
-      font-weight: 600;
-      opacity: 0.8;
-      font-size: 10px;
-    }
-    
-    .quote-meta-item span {
-      font-weight: 700;
-      font-size: 13px;
-    }
-    
-    /* Content Area */
-    .content {
-      padding: 40px;
-    }
-    
-    /* Project Details - Clean & Professional */
-    .project-details {
-      background: #f8fafc;
-      border-radius: 12px;
-      padding: 28px;
-      margin-bottom: 32px;
-      border: 1px solid #e2e8f0;
-    }
-    
-    .project-title {
-      font-size: 16px;
-      color: #1e293b;
-      font-weight: 700;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .project-info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    
-    .info-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .info-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1e293b;
-    }
-    
-    .project-description-box {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      border-left: 4px solid #2563eb;
-      margin-top: 16px;
-    }
-    
-    .project-description-box strong {
-      font-size: 12px;
-      color: #2563eb;
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-    
-    .project-description-box p {
-      font-size: 13px;
-      color: #475569;
-      line-height: 1.6;
-    }
-    
-    /* Print modunda KESINLIKLE yan yana kalsın - HİÇBİR ZAMAN alt alta olmasın */
-    @media print {
-      .project-info-table {
-        page-break-inside: avoid;
-        display: table !important;
-        width: 100% !important;
-      }
-      
-      .project-info-table tbody {
-        display: table-row-group !important;
-      }
-      
-      .project-info-table tr {
-        display: table-row !important;
-        page-break-inside: avoid;
-      }
-      
-      .project-info-table td {
-        display: table-cell !important;
-        width: 25% !important;
-        padding: 8px 5px !important;
-        vertical-align: top;
-      }
-    }
-    
-    .project-description {
-      margin-top: 15px;
-      padding: 15px;
-      background: white;
-      border-radius: 8px;
-      border: 2px dashed #bae6fd;
-      font-size: 11px;
-      line-height: 1.6;
-    }
-    
-    .project-description strong {
-      color: #1e40af;
-      font-size: 12px;
-      display: block;
-      margin-bottom: 8px;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    
-    /* Items Section - Modern Table */
-    .items-section-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin-bottom: 24px;
-    }
-    
-    .items-table {
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .items-table thead {
-      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-      color: white;
-    }
-    
-    .items-table th {
-      padding: 16px;
-      text-align: left;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .items-table th:first-child {
-      padding-left: 24px;
-    }
-    
-    .items-table th:last-child {
-      padding-right: 24px;
-    }
-    
-    .items-table tbody tr {
-      border-bottom: 1px solid #e2e8f0;
-      transition: background-color 0.2s;
-    }
-    
-    .items-table tbody tr:hover {
-      background: #f8fafc;
-    }
-    
-    .items-table tbody tr:last-child {
-      border-bottom: none;
-    }
-    
-    .items-table td {
-      padding: 18px 16px;
-      font-size: 13px;
-      color: #334155;
-    }
-    
-    .items-table td:first-child {
-      padding-left: 24px;
-    }
-    
-    .items-table td:last-child {
-      padding-right: 24px;
-    }
-    
-    .product-name {
-      font-weight: 600;
-      color: #1e293b;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-    
-    .product-meta {
-      font-size: 11px;
-      color: #64748b;
-      margin-top: 4px;
-    }
-    
-    /* Total Section - Elegant */
-    .total-section {
-      margin-top: 32px;
-      padding: 24px;
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-    }
-    
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      font-size: 14px;
-      color: #475569;
-    }
-    
-    .total-row.subtotal {
-      border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 16px;
-      margin-bottom: 12px;
-    }
-    
-    .total-row.grand-total {
-      border-top: 2px solid #2563eb;
-      padding-top: 16px;
-      margin-top: 12px;
-      font-size: 18px;
-      font-weight: 700;
-      color: #1e293b;
-    }
-    
-    .total-row strong {
-      font-weight: 600;
-    }
-    
-    .total-row span {
-      font-weight: 700;
-    }
-    
-    .total-row.grand-total span {
-      color: #2563eb;
-      font-size: 22px;
-    }
-    
-    .warranty-note {
-      margin-top: 20px;
-      padding: 16px;
-      background: #fefce8;
-      border-left: 4px solid #eab308;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #713f12;
-    }
-    
-    .warranty-note strong {
-      font-weight: 600;
-    }
-    
-    /* Signature Section - Professional */
-    .signature-section {
-      margin-top: 60px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
-      padding: 32px 0;
-      border-top: 2px solid #e2e8f0;
-    }
-    
-    .signature-box {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    
-    .signature-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .signature-image {
-      width: 160px;
-      height: auto;
-      max-height: 70px;
-      object-fit: contain;
-    }
-    
-    .signature-line {
-      border-top: 2px solid #cbd5e1;
-      padding-top: 12px;
-      min-width: 220px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1e293b;
-    }
-    
-    /* Footer - Elegant */
-    .footer {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      color: white;
-      padding: 32px;
-      margin-top: 0;
-      text-align: center;
-      border-radius: 0 0 16px 16px;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    
-    .footer-content {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 24px;
-      margin-bottom: 16px;
-      font-size: 12px;
-    }
-    
-    .footer-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .footer-copyright {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-top: 12px;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      body {
-        padding: 15px;
-      }
-      
-      .container {
-        border-radius: 12px;
-      }
-      
-      .print-button {
-        bottom: 20px;
-        right: 20px;
-        top: auto;
-        padding: 12px 24px;
-        font-size: 14px;
-      }
-      
-      .header {
-        padding: 24px 20px;
-      }
-      
-      .header-content {
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-      
-      .content {
-        padding: 24px 20px;
-      }
-      
-      .project-info-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-      }
-      
-      .items-table th,
-      .items-table td {
-        padding: 12px;
-        font-size: 11px;
-      }
-      
-      .signature-section {
-        grid-template-columns: 1fr;
-        gap: 40px;
-      }
-      
-      .footer {
-        padding: 24px 20px;
-      }
-    }
-    
-    @media print {
-      body {
-        background: white;
-      }
-      
-      .print-button {
-        display: none !important;
-      }
-      
-      .project-info-grid {
-        page-break-inside: avoid;
-      }
-      
-      .items-table {
-        page-break-inside: auto;
-      }
-      
-      .items-table tr {
-        page-break-inside: avoid;
-      }
-    }
-        width: 100%;
-      }
-      
-      .customer-name {
-        font-size: 16px;
-      }
-      
-      .customer-detail {
-        font-size: 12px;
-      }
-      
-      /* Sadece ekranda görüntülerken küçük mobillerde alt alta - PRINT'te DEĞİL */
-      .project-info-table tr {
-        display: block;
-        margin-bottom: 10px;
-      }
-      
-      .project-info-table td {
-        display: block;
-        width: 100% !important;
-        padding: 4px 0;
-      }
-    }
-    
-    /* Tablet ve masaüstü ekranda yan yana */
-    @media (min-width: 769px) {
-      .project-info-table tr {
-        display: table-row !important;
-      }
-      
-      .project-info-table td {
-        display: table-cell !important;
-        width: 25% !important;
-      }
-    }
-      
-      .items-table th,
-      .items-table td {
-        font-size: 9px;
-        padding: 6px;
-      }
-      
-      .signature-section {
-        flex-direction: column;
-        gap: 20px;
-        align-items: center;
-      }
-      
-      .signature-box-left,
-      .signature-box-right {
-        width: 100%;
-        text-align: center;
-      }
-      
-      .signature-box-right {
-        margin-top: 20px;
-      }
-    }
-    
-    @media print {
-      .print-button {
-        display: none !important;
-      }
-      .print-instructions {
-        display: none !important;
-      }
-    }
-  </style>
-  <script>
-    function downloadPDF() {
-      window.print();
-    }
-  </script>
-</head>
-<body>
-  <!-- BÜYÜK UYARI BANNER -->
-  <div class="print-instructions no-print" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-    <h2 style="font-size: 24px; margin-bottom: 10px; font-weight: 800;">⬇️ PDF OLARAK KAYDETMEK İÇİN ⬇️</h2>
-    <p style="font-size: 18px; margin-bottom: 15px;">Aşağıdaki KIRMIZI BUTONA tıklayın!</p>
-  </div>
-  
-  <button class="print-button no-print" onclick="downloadPDF()" style="
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    color: white;
-    border: none;
-    padding: 25px 40px;
-    border-radius: 50px;
-    font-size: 20px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5);
-    z-index: 10000;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    animation: pulse 2s infinite;
-  " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-    🖨️ PDF OLARAK KAYDET
-  </button>
-  
-  <style>
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5); }
-      50% { box-shadow: 0 8px 40px rgba(220, 38, 38, 0.8); }
-    }
-  </style>
-  
-  <div class="container">
-    <!-- Header Section -->
-    <div class="header">
-      <div class="header-content">
-        <div class="company-section">
-          <img src="/image/49125941466.jpg" alt="Ekim Soğutma Logo" class="logo" />
-          <h1>MET GRUP MARKASIDIR</h1>
-          <p>Profesyonel Soğutma ve Klima Sistemleri</p>
-          <div class="company-contacts">
-            <div>📞 +90 532 701 6283 / +90 542 457 2553</div>
-            <div>✉️ info@ekimsogutma.com</div>
-            <div>🌐 www.ekimsogutma.com</div>
-          </div>
-        </div>
-        
-        <div class="customer-section">
-          <h2>MÜŞTERİ BİLGİLERİ</h2>
-          <div class="customer-name">${data.customerInfo.name || 'MÜŞTERİ ADI'}</div>
-          <div class="customer-details">
-            ${data.customerInfo.company ? `<div class="customer-detail">🏢 ${data.customerInfo.company}</div>` : ''}
-            ${data.customerInfo.phone ? `<div class="customer-detail">📞 ${data.customerInfo.phone}</div>` : ''}
-            ${data.customerInfo.email ? `<div class="customer-detail">✉️ ${data.customerInfo.email}</div>` : ''}
-          </div>
-          <div class="quote-meta">
-            <div class="quote-meta-item">
-              <strong>TEKLİF NO</strong>
-              <span>#${data.quoteId}</span>
-            </div>
-            <div class="quote-meta-item">
-              <strong>TARİH</strong>
-              <span>${new Date(data.createdAt).toLocaleDateString('tr-TR')}</span>
-            </div>
-            <div class="quote-meta-item">
-              <strong>GEÇERLİLİK</strong>
-              <span>${data.conditions.validityPeriod} Gün</span>
-            </div>
-            <div class="quote-meta-item">
-              <strong>TESLİMAT</strong>
-              <span>${data.conditions.deliveryTime || '-'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="content">
-      <!-- Project Details -->
-      <div class="project-details">
-        <div class="project-title">📋 Proje Detayları</div>
-        <div class="project-info-grid">
-          <div class="info-item">
-            <div class="info-label">Proje Konusu</div>
-            <div class="info-value">${data.projectDetails.projectDesign || '-'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Teslimat Süresi</div>
-            <div class="info-value">${data.conditions.deliveryTime || '-'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Başlangıç Tarihi</div>
-            <div class="info-value">${data.schedule.startDate ? new Date(data.schedule.startDate).toLocaleDateString('tr-TR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    }) : '-'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Bitiş Tarihi</div>
-            <div class="info-value">${data.schedule.endDate ? new Date(data.schedule.endDate).toLocaleDateString('tr-TR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    }) : '-'}</div>
-          </div>
-        </div>
-        ${data.projectDetails.projectDescription ? `
-          <div class="project-description-box">
-            <strong>📝 Proje Açıklaması</strong>
-            <p>${data.projectDetails.projectDescription}</p>
-          </div>
-        ` : ''}
-      </div>
-
-      <!-- Items Table -->
-      <div>
-        <div class="items-section-title">📦 Teklif Kalemleri</div>
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Ürün Bilgisi</th>
-              <th style="text-align: center; width: 100px;">Miktar</th>
-              <th style="text-align: right; width: 140px;">Birim Fiyat</th>
-              <th style="text-align: right; width: 140px;">Toplam</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.items.map((item, index)=>`
-              <tr>
-                <td>
-                  <div class="product-name">${item.product.customName || item.product.name}</div>
-                  ${item.product.brand || item.product.model ? `<div class="product-meta">${item.product.brand || ''} ${item.product.model || ''}</div>` : ''}
-                  ${item.product.code ? `<div class="product-meta">Kod: ${item.product.code}</div>` : ''}
-                </td>
-                <td style="text-align: center; font-weight: 700; color: #2563eb;">${item.quantity}</td>
-                <td style="text-align: right; font-weight: 600; color: #059669;">€${item.unitPrice.toLocaleString('tr-TR', {
-            minimumFractionDigits: 2
-        })}</td>
-                <td style="text-align: right; font-weight: 700; color: #1e293b; font-size: 14px;">€${item.total.toLocaleString('tr-TR', {
-            minimumFractionDigits: 2
-        })}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <!-- Total Section -->
-        <div class="total-section">
-          <div class="total-row subtotal">
-            <strong>Ara Toplam</strong>
-            <span>€${data.items.reduce((sum, item)=>sum + item.total, 0).toLocaleString('tr-TR', {
-        minimumFractionDigits: 2
-    })}</span>
-          </div>
-          <div class="total-row">
-            <strong>KDV (%20)</strong>
-            <span>€${(data.items.reduce((sum, item)=>sum + item.total, 0) * 0.2).toLocaleString('tr-TR', {
-        minimumFractionDigits: 2
-    })}</span>
-          </div>
-          <div class="total-row grand-total">
-            <strong>GENEL TOPLAM</strong>
-            <span>€${(data.items.reduce((sum, item)=>sum + item.total, 0) * 1.2).toLocaleString('tr-TR', {
-        minimumFractionDigits: 2
-    })}</span>
-          </div>
-        </div>
-        
-        <div class="warranty-note">
-          <div><strong>✅ 2 Yıl Garanti</strong> - Cihazlarımız 2 yıl garanti kapsamındadır.</div>
-          <div style="margin-top: 8px;">ℹ️ Bu teklif sadece belirtilen ürünler için geçerlidir.</div>
-        </div>
-      </div>
-
-      <!-- Signature Section -->
-      <div class="signature-section">
-        <div class="signature-box">
-          <div class="signature-label">Ekim Soğutma</div>
-          <div class="signature-line"></div>
-        </div>
-        <div class="signature-box">
-          <div class="signature-label">Müşteri Onayı</div>
-          <div class="signature-line"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <div class="footer-content">
-        <div class="footer-item">🌐 www.ekimsogutma.com</div>
-        <div class="footer-item">✉️ info@ekimsogutma.com</div>
-        <div class="footer-item">📞 +90 532 701 6283 / +90 542 457 2553</div>
-      </div>
-      <div class="footer-copyright">© ${new Date().getFullYear()} Ekim Soğutma. Tüm hakları saklıdır.</div>
-    </div>
-  </div>
-</body>
-</html>
-  `;
-    // HTML'i yeni pencereye yaz
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    console.log('✅ Teklif HTML sayfası oluşturuldu!');
+;
+const generateQuoteHTML = async (data)=>{
+    // Direkt PDF indir - HTML'e gerek yok
+    const pdfData = {
+        ...data
+    };
+    await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$pdfGenerator$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["generateQuotePDF"])(pdfData);
+    console.log('✅ PDF direkt indirildi!');
 };
 }),
 "[project]/src/app/quotes/page.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {
@@ -1833,21 +957,38 @@ function QuotesPage() {
             alert('Teklif detayları getirilirken hata oluştu!');
         }
     };
-    const editQuote = (quote)=>{
-        // Redirect to main page with quote data for editing
-        const quoteData = {
-            id: quote.id,
-            customer_name: quote.customer_name,
-            customer_email: quote.customer_email,
-            customer_phone: quote.customer_phone,
-            company: quote.company,
-            total_amount: quote.total_amount,
-            status: quote.status,
-            notes: quote.notes
-        };
-        // Store in sessionStorage to pass to main page
-        sessionStorage.setItem('editQuote', JSON.stringify(quoteData));
-        window.location.href = '/?edit=true';
+    const editQuote = async (quote)=>{
+        try {
+            // Teklif detaylarını API'den al
+            const response = await fetch(`/api/quotes/${quote.id}`);
+            if (!response.ok) {
+                alert('Teklif detayları alınamadı!');
+                return;
+            }
+            const quoteDetails = await response.json();
+            // Redirect to main page with quote data for editing
+            const quoteData = {
+                id: quote.id,
+                customer_name: quote.customer_name,
+                customer_email: quote.customer_email,
+                customer_phone: quote.customer_phone,
+                company: quote.company,
+                total_amount: quote.total_amount,
+                status: quote.status,
+                notes: quote.notes,
+                items: quoteDetails.items || [],
+                conditions: quoteDetails.conditions || {
+                    validityPeriod: '30',
+                    deliveryTime: ''
+                }
+            };
+            // Store in sessionStorage to pass to main page
+            sessionStorage.setItem('editQuote', JSON.stringify(quoteData));
+            window.location.href = '/?edit=true';
+        } catch (error) {
+            console.error('Teklif düzenleme hatası:', error);
+            alert('Teklif detayları alınırken hata oluştu!');
+        }
     };
     const deleteQuote = async (quote)=>{
         if (!confirm(`"${quote.customer_name}" müşterisine ait #${quote.id} numaralı teklifi silmek istediğinizden emin misiniz?`)) {
@@ -1879,7 +1020,7 @@ function QuotesPage() {
                             className: "absolute top-20 left-10 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"
                         }, void 0, false, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 330,
+                            lineNumber: 346,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1889,7 +1030,7 @@ function QuotesPage() {
                             }
                         }, void 0, false, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 331,
+                            lineNumber: 347,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1899,18 +1040,18 @@ function QuotesPage() {
                             }
                         }, void 0, false, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 332,
+                            lineNumber: 348,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/quotes/page.tsx",
-                    lineNumber: 329,
+                    lineNumber: 345,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Header$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                     fileName: "[project]/src/app/quotes/page.tsx",
-                    lineNumber: 335,
+                    lineNumber: 351,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1925,20 +1066,20 @@ function QuotesPage() {
                                         className: "w-20 h-20 border-4 border-indigo-200 rounded-full animate-spin mx-auto"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 339,
+                                        lineNumber: 355,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "absolute top-2 left-2 w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 340,
+                                        lineNumber: 356,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 338,
+                                lineNumber: 354,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1949,7 +1090,7 @@ function QuotesPage() {
                                         children: "Teklifler yükleniyor..."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 343,
+                                        lineNumber: 359,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1957,30 +1098,30 @@ function QuotesPage() {
                                         children: "Lütfen bekleyin"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 344,
+                                        lineNumber: 360,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 342,
+                                lineNumber: 358,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 337,
+                        lineNumber: 353,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/quotes/page.tsx",
-                    lineNumber: 336,
+                    lineNumber: 352,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/app/quotes/page.tsx",
-            lineNumber: 327,
+            lineNumber: 343,
             columnNumber: 7
         }, this);
     }
@@ -1994,7 +1135,7 @@ function QuotesPage() {
                         className: "absolute top-20 left-10 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 356,
+                        lineNumber: 372,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2004,7 +1145,7 @@ function QuotesPage() {
                         }
                     }, void 0, false, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 357,
+                        lineNumber: 373,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2014,18 +1155,18 @@ function QuotesPage() {
                         }
                     }, void 0, false, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 358,
+                        lineNumber: 374,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 355,
+                lineNumber: 371,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Header$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 361,
+                lineNumber: 377,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2042,7 +1183,7 @@ function QuotesPage() {
                                         className: "absolute -top-6 -left-6 w-24 h-24 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full opacity-20 blur-xl animate-pulse"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 368,
+                                        lineNumber: 384,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
@@ -2050,7 +1191,7 @@ function QuotesPage() {
                                         children: "📋 Teklifler"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 369,
+                                        lineNumber: 385,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2058,13 +1199,13 @@ function QuotesPage() {
                                         children: "Tüm tekliflerinizi görüntüleyin ve yönetin"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 370,
+                                        lineNumber: 386,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 367,
+                                lineNumber: 383,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2079,7 +1220,7 @@ function QuotesPage() {
                                                     className: "w-3 h-3 bg-indigo-500 rounded-full animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 375,
+                                                    lineNumber: 391,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2091,18 +1232,18 @@ function QuotesPage() {
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 376,
+                                                    lineNumber: 392,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 374,
+                                            lineNumber: 390,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 373,
+                                        lineNumber: 389,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -2113,42 +1254,42 @@ function QuotesPage() {
                                                 children: "✨"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 383,
+                                                lineNumber: 399,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Yeni Teklif"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 384,
+                                                lineNumber: 400,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 379,
+                                        lineNumber: 395,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 372,
+                                lineNumber: 388,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 366,
+                        lineNumber: 382,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/quotes/page.tsx",
-                    lineNumber: 365,
+                    lineNumber: 381,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 364,
+                lineNumber: 380,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2167,7 +1308,7 @@ function QuotesPage() {
                                             children: "Arama"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 396,
+                                            lineNumber: 412,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2181,7 +1322,7 @@ function QuotesPage() {
                                                     className: "w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm text-gray-900 form-input-premium hover:border-indigo-300 transition-all duration-300"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 398,
+                                                    lineNumber: 414,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2191,88 +1332,12 @@ function QuotesPage() {
                                                         children: "🔍"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                        lineNumber: 406,
+                                                        lineNumber: 422,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 405,
-                                                    columnNumber: 17
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 397,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 395,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "group",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                            className: "block text-sm font-black text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors",
-                                            children: "Durum"
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 412,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
-                                            value: statusFilter,
-                                            onChange: (e)=>setStatusFilter(e.target.value),
-                                            className: "w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm text-gray-900 form-input-premium hover:border-indigo-300 transition-all duration-300",
-                                            children: [
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "",
-                                                    children: "Tüm Durumlar"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 418,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "draft",
-                                                    children: "Taslak"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 419,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "sent",
-                                                    children: "Gönderildi"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 420,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "approved",
-                                                    children: "Onaylandı"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 421,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "rejected",
-                                                    children: "Reddedildi"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 422,
-                                                    columnNumber: 17
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "expired",
-                                                    children: "Süresi Doldu"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 423,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
@@ -2292,55 +1357,63 @@ function QuotesPage() {
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
                                             className: "block text-sm font-black text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors",
-                                            children: "Sıralama"
+                                            children: "Durum"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
                                             lineNumber: 428,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
-                                            value: sortBy,
-                                            onChange: (e)=>setSortBy(e.target.value),
+                                            value: statusFilter,
+                                            onChange: (e)=>setStatusFilter(e.target.value),
                                             className: "w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm text-gray-900 form-input-premium hover:border-indigo-300 transition-all duration-300",
                                             children: [
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "newest",
-                                                    children: "En Yeni"
+                                                    value: "",
+                                                    children: "Tüm Durumlar"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 434,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "oldest",
-                                                    children: "En Eski"
+                                                    value: "draft",
+                                                    children: "Taslak"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 435,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "amount-high",
-                                                    children: "Tutar (Yüksek)"
+                                                    value: "sent",
+                                                    children: "Gönderildi"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 436,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "amount-low",
-                                                    children: "Tutar (Düşük)"
+                                                    value: "approved",
+                                                    children: "Onaylandı"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 437,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: "customer",
-                                                    children: "Müşteri (A-Z)"
+                                                    value: "rejected",
+                                                    children: "Reddedildi"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
                                                     lineNumber: 438,
+                                                    columnNumber: 17
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "expired",
+                                                    children: "Süresi Doldu"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 439,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
@@ -2356,6 +1429,74 @@ function QuotesPage() {
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "group",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                            className: "block text-sm font-black text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors",
+                                            children: "Sıralama"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/app/quotes/page.tsx",
+                                            lineNumber: 444,
+                                            columnNumber: 15
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
+                                            value: sortBy,
+                                            onChange: (e)=>setSortBy(e.target.value),
+                                            className: "w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm text-gray-900 form-input-premium hover:border-indigo-300 transition-all duration-300",
+                                            children: [
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "newest",
+                                                    children: "En Yeni"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 450,
+                                                    columnNumber: 17
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "oldest",
+                                                    children: "En Eski"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 451,
+                                                    columnNumber: 17
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "amount-high",
+                                                    children: "Tutar (Yüksek)"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 452,
+                                                    columnNumber: 17
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "amount-low",
+                                                    children: "Tutar (Düşük)"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 453,
+                                                    columnNumber: 17
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
+                                                    value: "customer",
+                                                    children: "Müşteri (A-Z)"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                                    lineNumber: 454,
+                                                    columnNumber: 17
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/app/quotes/page.tsx",
+                                            lineNumber: 445,
+                                            columnNumber: 15
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/app/quotes/page.tsx",
+                                    lineNumber: 443,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "flex items-end",
                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                         onClick: fetchQuotes,
@@ -2365,36 +1506,36 @@ function QuotesPage() {
                                                 children: "🔄"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 447,
+                                                lineNumber: 463,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Yenile"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 448,
+                                                lineNumber: 464,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 443,
+                                        lineNumber: 459,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 442,
+                                    lineNumber: 458,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 394,
+                            lineNumber: 410,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 393,
+                        lineNumber: 409,
                         columnNumber: 9
                     }, this),
                     sortedQuotes.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2407,12 +1548,12 @@ function QuotesPage() {
                                     children: "📋"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 458,
+                                    lineNumber: 474,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 457,
+                                lineNumber: 473,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2420,7 +1561,7 @@ function QuotesPage() {
                                 children: "Henüz teklif yok"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 460,
+                                lineNumber: 476,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2428,7 +1569,7 @@ function QuotesPage() {
                                 children: "İlk teklifinizi oluşturmak için yeni teklif butonuna tıklayın"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 461,
+                                lineNumber: 477,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -2441,31 +1582,31 @@ function QuotesPage() {
                                             children: "✨"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 467,
+                                            lineNumber: 483,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             children: "Yeni Teklif Oluştur"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 468,
+                                            lineNumber: 484,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 466,
+                                    lineNumber: 482,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 462,
+                                lineNumber: 478,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 456,
+                        lineNumber: 472,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8",
@@ -2483,7 +1624,7 @@ function QuotesPage() {
                                             className: `absolute top-4 right-4 w-20 h-20 rounded-full blur-2xl opacity-20 ${status.color.includes('green') ? 'bg-green-300' : status.color.includes('blue') ? 'bg-blue-300' : status.color.includes('red') ? 'bg-red-300' : status.color.includes('orange') ? 'bg-orange-300' : 'bg-gray-300'}`
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 484,
+                                            lineNumber: 500,
                                             columnNumber: 21
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2504,12 +1645,12 @@ function QuotesPage() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                                        lineNumber: 497,
+                                                                        lineNumber: 513,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 496,
+                                                                    lineNumber: 512,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2520,13 +1661,13 @@ function QuotesPage() {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 499,
+                                                                    lineNumber: 515,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 495,
+                                                            lineNumber: 511,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2534,13 +1675,13 @@ function QuotesPage() {
                                                             children: formatDate(quote.created_at)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 501,
+                                                            lineNumber: 517,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 494,
+                                                    lineNumber: 510,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2555,7 +1696,7 @@ function QuotesPage() {
                                                                 children: "📝 Taslak"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 509,
+                                                                lineNumber: 525,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2563,7 +1704,7 @@ function QuotesPage() {
                                                                 children: "📤 Gönderildi"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 510,
+                                                                lineNumber: 526,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2571,7 +1712,7 @@ function QuotesPage() {
                                                                 children: "✅ Onaylandı"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 511,
+                                                                lineNumber: 527,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2579,7 +1720,7 @@ function QuotesPage() {
                                                                 children: "❌ Reddedildi"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 512,
+                                                                lineNumber: 528,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2587,24 +1728,24 @@ function QuotesPage() {
                                                                 children: "⏰ Süresi Doldu"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 513,
+                                                                lineNumber: 529,
                                                                 columnNumber: 27
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                        lineNumber: 504,
+                                                        lineNumber: 520,
                                                         columnNumber: 25
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 503,
+                                                    lineNumber: 519,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 493,
+                                            lineNumber: 509,
                                             columnNumber: 21
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2620,12 +1761,12 @@ function QuotesPage() {
                                                                 children: quote.customer_name.charAt(0).toUpperCase()
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 522,
+                                                                lineNumber: 538,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 521,
+                                                            lineNumber: 537,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h4", {
@@ -2633,13 +1774,13 @@ function QuotesPage() {
                                                             children: quote.customer_name
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 526,
+                                                            lineNumber: 542,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 520,
+                                                    lineNumber: 536,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2652,7 +1793,7 @@ function QuotesPage() {
                                                                     className: "w-1.5 h-1.5 bg-blue-400 rounded-full"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 532,
+                                                                    lineNumber: 548,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2663,13 +1804,13 @@ function QuotesPage() {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 533,
+                                                                    lineNumber: 549,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 531,
+                                                            lineNumber: 547,
                                                             columnNumber: 27
                                                         }, this),
                                                         quote.customer_email && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2679,7 +1820,7 @@ function QuotesPage() {
                                                                     className: "w-1.5 h-1.5 bg-green-400 rounded-full"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 538,
+                                                                    lineNumber: 554,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2690,13 +1831,13 @@ function QuotesPage() {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 539,
+                                                                    lineNumber: 555,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 537,
+                                                            lineNumber: 553,
                                                             columnNumber: 27
                                                         }, this),
                                                         quote.customer_phone && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2706,7 +1847,7 @@ function QuotesPage() {
                                                                     className: "w-1.5 h-1.5 bg-purple-400 rounded-full"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 544,
+                                                                    lineNumber: 560,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2717,25 +1858,25 @@ function QuotesPage() {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 545,
+                                                                    lineNumber: 561,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 543,
+                                                            lineNumber: 559,
                                                             columnNumber: 27
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 529,
+                                                    lineNumber: 545,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 519,
+                                            lineNumber: 535,
                                             columnNumber: 21
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2749,7 +1890,7 @@ function QuotesPage() {
                                                             children: "Toplam Tutar:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 554,
+                                                            lineNumber: 570,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2762,13 +1903,13 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 555,
+                                                            lineNumber: 571,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 553,
+                                                    lineNumber: 569,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2779,7 +1920,7 @@ function QuotesPage() {
                                                             children: "Ürün Sayısı:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 560,
+                                                            lineNumber: 576,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2790,7 +1931,7 @@ function QuotesPage() {
                                                                     children: quote.item_count
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 562,
+                                                                    lineNumber: 578,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2798,25 +1939,25 @@ function QuotesPage() {
                                                                     children: "ürün"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 563,
+                                                                    lineNumber: 579,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 561,
+                                                            lineNumber: 577,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 559,
+                                                    lineNumber: 575,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 552,
+                                            lineNumber: 568,
                                             columnNumber: 21
                                         }, this),
                                         quote.notes && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2826,12 +1967,12 @@ function QuotesPage() {
                                                 children: quote.notes
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 571,
+                                                lineNumber: 587,
                                                 columnNumber: 25
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 570,
+                                            lineNumber: 586,
                                             columnNumber: 23
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2845,20 +1986,20 @@ function QuotesPage() {
                                                             children: "👁️"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 581,
+                                                            lineNumber: 597,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "Görüntüle"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 582,
+                                                            lineNumber: 598,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 577,
+                                                    lineNumber: 593,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2869,45 +2010,44 @@ function QuotesPage() {
                                                             children: "✏️"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 588,
+                                                            lineNumber: 604,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "Düzenle"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 589,
+                                                            lineNumber: 605,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 584,
+                                                    lineNumber: 600,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                                     onClick: ()=>generateHTMLForQuote(quote),
-                                                    className: "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-4 rounded-xl text-base font-bold transition-all duration-300 btn-hover shadow-2xl flex items-center justify-center space-x-3 scale-110 animate-pulse",
+                                                    className: "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 btn-hover shadow-lg flex items-center justify-center space-x-2",
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            className: "text-2xl",
-                                                            children: "�️"
+                                                            children: "⬇️"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 595,
+                                                            lineNumber: 611,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: "PDF OLUŞTUR"
+                                                            children: "İndir"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 596,
+                                                            lineNumber: 612,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 591,
+                                                    lineNumber: 607,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2918,49 +2058,49 @@ function QuotesPage() {
                                                             children: "🗑️"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 602,
+                                                            lineNumber: 618,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "Sil"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 603,
+                                                            lineNumber: 619,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 598,
+                                                    lineNumber: 614,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 576,
+                                            lineNumber: 592,
                                             columnNumber: 21
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 482,
+                                    lineNumber: 498,
                                     columnNumber: 19
                                 }, this)
                             }, quote.id, false, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 477,
+                                lineNumber: 493,
                                 columnNumber: 17
                             }, this);
                         })
                     }, void 0, false, {
                         fileName: "[project]/src/app/quotes/page.tsx",
-                        lineNumber: 473,
+                        lineNumber: 489,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 392,
+                lineNumber: 408,
                 columnNumber: 7
             }, this),
             showQuoteModal && selectedQuote && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2981,7 +2121,7 @@ function QuotesPage() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 620,
+                                        lineNumber: 636,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2990,18 +2130,18 @@ function QuotesPage() {
                                         children: "×"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                        lineNumber: 621,
+                                        lineNumber: 637,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                lineNumber: 619,
+                                lineNumber: 635,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 618,
+                            lineNumber: 634,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3018,7 +2158,7 @@ function QuotesPage() {
                                                     children: "👤 Müşteri Bilgileri"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 634,
+                                                    lineNumber: 650,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3031,7 +2171,7 @@ function QuotesPage() {
                                                                     children: "Ad:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 636,
+                                                                    lineNumber: 652,
                                                                     columnNumber: 24
                                                                 }, this),
                                                                 " ",
@@ -3039,7 +2179,7 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 636,
+                                                            lineNumber: 652,
                                                             columnNumber: 21
                                                         }, this),
                                                         selectedQuote.company && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3049,7 +2189,7 @@ function QuotesPage() {
                                                                     children: "Firma:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 638,
+                                                                    lineNumber: 654,
                                                                     columnNumber: 26
                                                                 }, this),
                                                                 " ",
@@ -3057,7 +2197,7 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 638,
+                                                            lineNumber: 654,
                                                             columnNumber: 23
                                                         }, this),
                                                         selectedQuote.customer_email && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3067,7 +2207,7 @@ function QuotesPage() {
                                                                     children: "E-posta:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 641,
+                                                                    lineNumber: 657,
                                                                     columnNumber: 26
                                                                 }, this),
                                                                 " ",
@@ -3075,7 +2215,7 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 641,
+                                                            lineNumber: 657,
                                                             columnNumber: 23
                                                         }, this),
                                                         selectedQuote.customer_phone && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3085,7 +2225,7 @@ function QuotesPage() {
                                                                     children: "Telefon:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 644,
+                                                                    lineNumber: 660,
                                                                     columnNumber: 26
                                                                 }, this),
                                                                 " ",
@@ -3093,19 +2233,19 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 644,
+                                                            lineNumber: 660,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 635,
+                                                    lineNumber: 651,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 633,
+                                            lineNumber: 649,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3116,7 +2256,7 @@ function QuotesPage() {
                                                     children: "📋 Teklif Bilgileri"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 651,
+                                                    lineNumber: 667,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3129,7 +2269,7 @@ function QuotesPage() {
                                                                     children: "Durum:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 653,
+                                                                    lineNumber: 669,
                                                                     columnNumber: 24
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3137,13 +2277,13 @@ function QuotesPage() {
                                                                     children: statusConfig[selectedQuote.status]?.label || selectedQuote.status
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 654,
+                                                                    lineNumber: 670,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 653,
+                                                            lineNumber: 669,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3153,7 +2293,7 @@ function QuotesPage() {
                                                                     children: "Tarih:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 660,
+                                                                    lineNumber: 676,
                                                                     columnNumber: 24
                                                                 }, this),
                                                                 " ",
@@ -3161,7 +2301,7 @@ function QuotesPage() {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 660,
+                                                            lineNumber: 676,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3171,7 +2311,7 @@ function QuotesPage() {
                                                                     children: "Toplam Tutar:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 661,
+                                                                    lineNumber: 677,
                                                                     columnNumber: 24
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3184,31 +2324,31 @@ function QuotesPage() {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 662,
+                                                                    lineNumber: 678,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 661,
+                                                            lineNumber: 677,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 652,
+                                                    lineNumber: 668,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 650,
+                                            lineNumber: 666,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 631,
+                                    lineNumber: 647,
                                     columnNumber: 15
                                 }, this),
                                 selectedQuote.notes && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3219,7 +2359,7 @@ function QuotesPage() {
                                             children: "📄 Proje Notları"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 673,
+                                            lineNumber: 689,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3227,13 +2367,13 @@ function QuotesPage() {
                                             children: selectedQuote.notes
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 674,
+                                            lineNumber: 690,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 672,
+                                    lineNumber: 688,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3246,12 +2386,12 @@ function QuotesPage() {
                                                 children: "🛍️ Teklif Kalemleri"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 681,
+                                                lineNumber: 697,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 680,
+                                            lineNumber: 696,
                                             columnNumber: 17
                                         }, this),
                                         selectedQuote.items && selectedQuote.items.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3268,7 +2408,7 @@ function QuotesPage() {
                                                                     children: "Ürün"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 689,
+                                                                    lineNumber: 705,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -3276,7 +2416,7 @@ function QuotesPage() {
                                                                     children: "Miktar"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 690,
+                                                                    lineNumber: 706,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -3284,7 +2424,7 @@ function QuotesPage() {
                                                                     children: "Birim Fiyat"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 691,
+                                                                    lineNumber: 707,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -3292,18 +2432,18 @@ function QuotesPage() {
                                                                     children: "Toplam"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                                    lineNumber: 692,
+                                                                    lineNumber: 708,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                                            lineNumber: 688,
+                                                            lineNumber: 704,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                        lineNumber: 687,
+                                                        lineNumber: 703,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -3319,7 +2459,7 @@ function QuotesPage() {
                                                                                 children: item.product_name || 'Unknown Product'
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                                lineNumber: 699,
+                                                                                lineNumber: 715,
                                                                                 columnNumber: 31
                                                                             }, this),
                                                                             item.brand && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3331,7 +2471,7 @@ function QuotesPage() {
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                                lineNumber: 700,
+                                                                                lineNumber: 716,
                                                                                 columnNumber: 46
                                                                             }, this),
                                                                             item.code && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3342,13 +2482,13 @@ function QuotesPage() {
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                                lineNumber: 701,
+                                                                                lineNumber: 717,
                                                                                 columnNumber: 45
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                                        lineNumber: 698,
+                                                                        lineNumber: 714,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3356,7 +2496,7 @@ function QuotesPage() {
                                                                         children: item.quantity
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                                        lineNumber: 703,
+                                                                        lineNumber: 719,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3369,7 +2509,7 @@ function QuotesPage() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                                        lineNumber: 704,
+                                                                        lineNumber: 720,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -3382,29 +2522,29 @@ function QuotesPage() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                                        lineNumber: 707,
+                                                                        lineNumber: 723,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 ]
                                                             }, index, true, {
                                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                                lineNumber: 697,
+                                                                lineNumber: 713,
                                                                 columnNumber: 27
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/quotes/page.tsx",
-                                                        lineNumber: 695,
+                                                        lineNumber: 711,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/quotes/page.tsx",
-                                                lineNumber: 686,
+                                                lineNumber: 702,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 685,
+                                            lineNumber: 701,
                                             columnNumber: 19
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                             className: "p-8 text-center text-gray-500",
@@ -3414,26 +2554,26 @@ function QuotesPage() {
                                                     children: "😊"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 717,
+                                                    lineNumber: 733,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                     children: "Bu teklif için ürün kalemi bulunamadı."
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                                    lineNumber: 718,
+                                                    lineNumber: 734,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 716,
+                                            lineNumber: 732,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 679,
+                                    lineNumber: 695,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3445,7 +2585,7 @@ function QuotesPage() {
                                             children: "Düzenle"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 725,
+                                            lineNumber: 741,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3454,7 +2594,7 @@ function QuotesPage() {
                                             children: "PDF İndir"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 731,
+                                            lineNumber: 747,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3463,41 +2603,41 @@ function QuotesPage() {
                                             children: "Kapat"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/quotes/page.tsx",
-                                            lineNumber: 737,
+                                            lineNumber: 753,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/quotes/page.tsx",
-                                    lineNumber: 724,
+                                    lineNumber: 740,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/quotes/page.tsx",
-                            lineNumber: 630,
+                            lineNumber: 646,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/quotes/page.tsx",
-                    lineNumber: 617,
+                    lineNumber: 633,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 616,
+                lineNumber: 632,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Footer$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/src/app/quotes/page.tsx",
-                lineNumber: 749,
+                lineNumber: 765,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/quotes/page.tsx",
-        lineNumber: 353,
+        lineNumber: 369,
         columnNumber: 5
     }, this);
 }
