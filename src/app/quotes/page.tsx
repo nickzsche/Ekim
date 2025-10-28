@@ -590,17 +590,10 @@ export default function QuotesPage() {
                       </button>
                       <button 
                         onClick={() => generateHTMLForQuote(quote)}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 btn-hover shadow-lg flex items-center justify-center space-x-2"
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-4 rounded-xl text-base font-bold transition-all duration-300 btn-hover shadow-2xl flex items-center justify-center space-x-3 scale-110 animate-pulse"
                       >
-                        <span>🌐</span>
-                        <span>HTML</span>
-                      </button>
-                      <button 
-                        onClick={() => generatePDFForQuote(quote)}
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 btn-hover shadow-lg flex items-center justify-center space-x-2"
-                      >
-                        <span>📄</span>
-                        <span>PDF</span>
+                        <span className="text-2xl">�️</span>
+                        <span>PDF OLUŞTUR</span>
                       </button>
                       <button 
                         onClick={() => deleteQuote(quote)}

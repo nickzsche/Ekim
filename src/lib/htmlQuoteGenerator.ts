@@ -69,6 +69,8 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
         margin: 0;
         padding: 0;
         background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       .no-print {
         display: none !important;
@@ -76,6 +78,14 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       .container {
         box-shadow: none !important;
         margin-bottom: 0 !important;
+      }
+      .header {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .footer {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
     }
     
@@ -144,6 +154,8 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       color: white;
       position: relative;
       overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     
     .header::before {
@@ -209,6 +221,8 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 16px;
       padding: 24px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     
     .customer-section h2 {
@@ -582,6 +596,8 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       margin-top: 0;
       text-align: center;
       border-radius: 0 0 16px 16px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     
     .footer-content {
@@ -741,6 +757,9 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       .print-button {
         display: none !important;
       }
+      .print-instructions {
+        display: none !important;
+      }
     }
   </style>
   <script>
@@ -750,7 +769,40 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
   </script>
 </head>
 <body>
-  <button class="print-button no-print" onclick="downloadPDF()">🖨️ PDF Olarak Kaydet</button>
+  <!-- BÜYÜK UYARI BANNER -->
+  <div class="print-instructions no-print" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+    <h2 style="font-size: 24px; margin-bottom: 10px; font-weight: 800;">⬇️ PDF OLARAK KAYDETMEK İÇİN ⬇️</h2>
+    <p style="font-size: 18px; margin-bottom: 15px;">Aşağıdaki KIRMIZI BUTONA tıklayın!</p>
+  </div>
+  
+  <button class="print-button no-print" onclick="downloadPDF()" style="
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border: none;
+    padding: 25px 40px;
+    border-radius: 50px;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5);
+    z-index: 10000;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    animation: pulse 2s infinite;
+  " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+    🖨️ PDF OLARAK KAYDET
+  </button>
+  
+  <style>
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5); }
+      50% { box-shadow: 0 8px 40px rgba(220, 38, 38, 0.8); }
+    }
+  </style>
   
   <div class="container">
     <!-- Header Section -->
@@ -872,7 +924,7 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
         </div>
         
         <div class="warranty-note">
-          <div><strong>✅ 2 Yıl Garanti</strong> - Tüm ürünler 2 yıl garanti kapsamındadır.</div>
+          <div><strong>✅ 2 Yıl Garanti</strong> - Cihazlarımız 2 yıl garanti kapsamındadır.</div>
           <div style="margin-top: 8px;">ℹ️ Bu teklif sadece belirtilen ürünler için geçerlidir.</div>
         </div>
       </div>
@@ -881,11 +933,11 @@ export const generateQuoteHTML = (data: QuoteHTMLData): void => {
       <div class="signature-section">
         <div class="signature-box">
           <div class="signature-label">Ekim Soğutma</div>
-          <img src="/image/imza.png" class="signature-image" alt="İmza" />
+          <div class="signature-line"></div>
         </div>
         <div class="signature-box">
           <div class="signature-label">Müşteri Onayı</div>
-          <div class="signature-line">İmza & Kaşe</div>
+          <div class="signature-line"></div>
         </div>
       </div>
     </div>

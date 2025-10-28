@@ -922,89 +922,80 @@ Teslim: ${conditions.deliveryTime}`
 
       console.log('Kaydedilecek quote:', quote);
 
-      const items: QuoteItem[] = cart
-        .filter(item => {
-          // Gruplanmış ürünleri veritabanına kaydetme
-          if (item.isGrouped) return false;
+      // TÜM ÜRÜNLER İÇİN product_id'leri hazırla
+      // Manuel eklenen veya grup ürünleri için önce products tablosuna kaydet
+      const itemsWithProductIds = await Promise.all(
+        cart.map(async (item) => {
+          let productId = item.product.id!;
           
-          // Panel hesaplama, bakır boru, kablo gibi manuel eklenen ürünleri filtreleme
-          // Bu ürünlerin ID'si Date.now() ile oluşturulmuştur ve veritabanında yoktur
-          const productId = item.product.id!;
-          // Date.now() çok büyük sayılar üretir (13 haneli), veritabanı ID'leri daha küçüktür
-          if (productId > 1000000000) return false;
+          // Eğer ürün manuel eklenmişse veya ID çok büyükse (Date.now() ile oluşturulmuş)
+          // veya gruplanmışsa, önce products tablosuna kaydet
+          if (item.isGrouped || productId > 1000000000) {
+            try {
+              const productData = {
+                name: item.customName || item.product.name,
+                code: item.product.code || `CUSTOM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                brand: item.product.brand || '',
+                model: item.product.model || '',
+                category: item.product.category || (item.isGrouped ? 'Grup' : 'Manuel'),
+                price: item.unitPrice,
+                description: item.product.description || (item.isGrouped ? 'Gruplanmış ürün' : 'Manuel eklenen ürün'),
+                stock_quantity: 0,
+                unit: 'adet'
+              };
+              
+              console.log('Manuel/grup ürün kaydediliyor:', productData);
+              
+              // Ürünü veritabanına kaydet
+              const productResponse = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData)
+              });
+              
+              if (productResponse.ok) {
+                const newProduct = await productResponse.json();
+                productId = newProduct.id;
+                console.log(`✅ Manuel/grup ürün kaydedildi: ${productData.name}, ID: ${productId}`);
+              } else {
+                const errorData = await productResponse.json();
+                console.error(`❌ Ürün kaydedilemedi: ${productData.name}`, errorData);
+                // Hata durumunda orijinal ID'yi kullan
+              }
+            } catch (err) {
+              console.error('Ürün kaydetme hatası:', err);
+            }
+          }
           
-          return true;
+          return {
+            product_id: productId,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total_price: item.unitPrice * item.quantity,
+            quote_id: 0
+          };
         })
-        .map(item => ({
-          product_id: item.product.id!,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          total_price: item.unitPrice * item.quantity,
-          quote_id: 0
-        }));
+      );
+      
+      console.log('✅ Kaydedilecek items hazır:', itemsWithProductIds);
       
       const response = await fetch('/api/quotes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ quote, items }),
+        body: JSON.stringify({ quote, items: itemsWithProductIds }),
       });
 
+      console.log('API Response Status:', response.status, response.statusText);
+      
       const result = await response.json();
-      console.log('API Response:', result);
+      console.log('API Response Body:', result);
 
       if (response.ok) {
         const quoteId = result.quoteId;
 
-        const pdfData: QuotePDFData = {
-          quoteId: quoteId,
-          customerInfo: {
-            name: customerInfo.name.trim(),
-            company: customerInfo.company?.trim() || '',
-            email: customerInfo.email?.trim() || '',
-            phone: customerInfo.phone?.trim() || '',
-            address: customerInfo.address?.trim() || ''
-          },
-          projectDetails: {
-            projectDesign: projectDetails.projectDesign,
-            projectDescription: projectDetails.projectDescription
-          },
-          schedule: {
-            startDate: schedule.startDate,
-            endDate: schedule.endDate
-          },
-          conditions: {
-            validityPeriod: conditions.validityPeriod,
-            deliveryTime: conditions.deliveryTime
-          },
-          items: cart.map(item => ({
-            product: {
-              name: item.customName || item.product.name,
-              brand: item.isGrouped ? '' : item.product.brand,
-              model: item.isGrouped ? '' : item.product.model,
-              code: item.isGrouped ? '' : item.product.code,
-              description: item.isGrouped ? 'Grup' : item.product.description,
-            },
-            quantity: item.quantity,
-            unitPrice: item.salesPrice ?? item.unitPrice,
-            total: (item.salesPrice ?? item.unitPrice) * item.quantity,
-          })),
-          subtotal: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0),
-          kdv: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0) * 0.20,
-          total: cart.reduce((sum, item) => sum + (item.salesPrice ?? item.unitPrice) * item.quantity, 0) * 1.20,
-          createdAt: new Date().toISOString()
-        };
-
-        console.log('Ana sayfada PDF için hazırlanan veri:', pdfData);
-        console.log('Müşteri bilgileri:', pdfData.customerInfo);
-
-        // HTML oluştur (yeni pencerede göster)
-        const htmlData: QuoteHTMLData = { ...pdfData };
-        generateQuoteHTML(htmlData);
-
-        alert('Teklif başarıyla oluşturuldu! HTML sayfasında görüntüleniyor - oradan PDF olarak kaydedebilirsiniz.');
-
+        // Teklif başarıyla oluşturuldu, formu temizle
         setCart([]);
         setCustomerInfo({
           name: '',
@@ -1027,6 +1018,10 @@ Teslim: ${conditions.deliveryTime}`
         });
         setSelectedCustomer('');
         setActiveStep(1);
+
+        // Teklifler sayfasına yönlendir
+        alert(`Teklif #${quoteId} başarıyla oluşturuldu! Teklifler sayfasına yönlendiriliyorsunuz.`);
+        window.location.href = '/quotes';
       } else {
         console.error('API Error Response:', result);
         alert(`Teklif oluşturulurken hata oluştu: ${result.error || 'Bilinmeyen hata'}`);

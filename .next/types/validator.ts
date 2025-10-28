@@ -155,6 +155,12 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   handler satisfies RouteHandlerConfig<"/api/projects">
 }
 
+// Validate ../../src/app/api/quotes/[id]/download-pdf/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/quotes/[id]/download-pdf/route.js")
+  handler satisfies RouteHandlerConfig<"/api/quotes/[id]/download-pdf">
+}
+
 // Validate ../../src/app/api/quotes/[id]/route.ts
 {
   const handler = {} as typeof import("../../src/app/api/quotes/[id]/route.js")

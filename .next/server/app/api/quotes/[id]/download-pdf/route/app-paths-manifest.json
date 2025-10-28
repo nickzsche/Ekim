@@ -1,0 +1,3 @@
+{
+  "/api/quotes/[id]/download-pdf/route": "app/api/quotes/[id]/download-pdf/route.js"
+}

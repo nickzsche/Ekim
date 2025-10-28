@@ -82,14 +82,10 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
     const jsPDF = (await import('jspdf')).default;
     console.log('PDF oluşturma başladı...');
     
-    // Load logo and signature as base64
+    // Load logo as base64
     console.log('Logo yükleniyor...');
     const logoBase64 = await loadImageAsBase64('/image/49125941466.jpg');
     console.log('Logo yükleme tamamlandı:', logoBase64 ? 'Başarılı' : 'Logo yok');
-    
-    console.log('İmza yükleniyor...');
-    const signatureBase64 = await loadImageAsBase64('/image/imza.png');
-    console.log('İmza yükleme tamamlandı:', signatureBase64 ? 'Başarılı' : 'İmza yok');
     
     // Create a temporary container for the PDF content
     const tempDiv = document.createElement('div');
@@ -207,12 +203,11 @@ export const generateQuotePDF = async (data: QuotePDFData): Promise<void> => {
     </div>
   </div>
 
-      <!-- İmza Bölümü -->
+      <!-- İmza Bölümü (Sadece metin) -->
       <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
         <table style="width: 100%;">
           <tr>
             <td style="width: 50%; vertical-align: bottom; padding-bottom: 10px;">
-              ${signatureBase64 ? `<img src="${signatureBase64}" style="width: 140px; height: auto; max-height: 60px; object-fit: contain; display: block;" alt="İmza" />` : ''}
               <div style="font-size: 11px; font-weight: bold; color: #1e293b; margin-top: 8px; border-top: 1px solid #1e293b; display: inline-block; padding-top: 4px; min-width: 150px; text-align: center;">Ekim Soğutma</div>
             </td>
             <td style="width: 50%; vertical-align: bottom; text-align: right; padding-bottom: 10px;">
