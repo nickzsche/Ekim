@@ -477,10 +477,26 @@ const generateQuotePDF = async (data)=>{
           ${logoBase64 ? `<img src="${logoBase64}" style="width: 100px; height: auto; display: block;" alt="Logo" />` : ''}
           <div style="font-size: 7px; font-weight: 500; margin-top: 4px; color: #555;">EKİM SOĞUTMA MET GRUP MARKASIDIR</div>
         </td>
-        <td style="width: 80%; vertical-align: top; font-size: 9px; text-align: right; padding-left: 15px; border: none;">
-          <div style="margin-bottom: 3px;"><strong>ADRES:</strong> Yeniçamlıca mah. Leman Ana cad. No:39/1-2 Ataşehir / İstanbul</div>
-          <div style="margin-bottom: 3px;"><strong>TELEFON:</strong> 0532 701 62 83</div>
-          <div><strong>WEB:</strong> http://ekimsogutma.com/</div>
+        <td style="width: 40%; vertical-align: top; border: none;"></td>
+        <td style="width: 40%; vertical-align: top; font-size: 9px; border: none;">
+          <table style="width: 100%; border: none;">
+            <tr>
+              <td style="text-align: right; border: none; padding: 2px 5px; vertical-align: top; width: 30%;"><strong>ADRES:</strong></td>
+              <td style="text-align: left; border: none; padding: 2px 0; width: 70%;">Yeniçamlıca mah. Leman Ana cad.<br/>No:39/1-2 Ataşehir / İstanbul</td>
+            </tr>
+            <tr>
+              <td style="text-align: right; border: none; padding: 2px 5px; vertical-align: top;"><strong>E-POSTA:</strong></td>
+              <td style="text-align: left; border: none; padding: 2px 0;">info@ekimsogutma.com</td>
+            </tr>
+            <tr>
+              <td style="text-align: right; border: none; padding: 2px 5px; vertical-align: top;"><strong>TELEFON:</strong></td>
+              <td style="text-align: left; border: none; padding: 2px 0;">0532 701 62 83</td>
+            </tr>
+            <tr>
+              <td style="text-align: right; border: none; padding: 2px 5px; vertical-align: top;"><strong>WEB:</strong></td>
+              <td style="text-align: left; border: none; padding: 2px 0;">http://ekimsogutma.com/</td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
